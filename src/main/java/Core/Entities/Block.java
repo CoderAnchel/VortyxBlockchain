@@ -1,5 +1,6 @@
-package Core;
+package Core.Entities;
 
+import java.util.ArrayList;
 import java.util.Date;
 
 public class Block {
@@ -7,6 +8,13 @@ public class Block {
     private String data;
     private String previousHash;
     private String hash;
+    private int nonce;
+    private String merkleRoot;
+    private ArrayList<String> transactions;
+    private int position;
+    private String miner;
+    private double fee;
+
 
     public Date getTimestamp() {
         return timestamp;

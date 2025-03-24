@@ -12,6 +12,7 @@ public class Main {
     public static void main(String[] args) {
         Security.addProvider(new BouncyCastleProvider());
         try {
+            Context.init();
             KeyPair wallet1 = Context.createWallet();
             KeyPairAnalizer(wallet1);
             System.out.println("-------------------");
@@ -23,8 +24,6 @@ public class Main {
             String publicKey = KeyPairUtils.getPublickey(wallet1);
             System.out.println("Finding for wallet with publickey: "+publicKey);
             Context.showWalletInfo(publicKey);
-
-            LinkedList linkedList = new LinkedList();
         } catch (Exception e) {
             e.printStackTrace();
         }

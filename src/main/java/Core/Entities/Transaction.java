@@ -1,4 +1,4 @@
-package Core;
+package Core.Entities;
 
 import java.util.Date;
 
@@ -101,5 +101,16 @@ public class Transaction {
 
     public void setNumberOfComfirmations(int numberOfComfirmations) {
         this.numberOfComfirmations = numberOfComfirmations;
+    }
+
+    public void showInfo() {
+        System.out.println("------------------------");
+        System.out.println("Transaction "+this.HashID()+": ");
+        System.out.println("    value: "+this.value());
+        System.out.println("    Nonce: "+this.nonce());
+        System.out.println("    State: "+this.state());
+        System.out.println("    From: "+this.senderPublicKey());
+        System.out.println("    To: "+this.reciverPublicKey());
+        System.out.println("    Fee: "+this.fee());
     }
 }
