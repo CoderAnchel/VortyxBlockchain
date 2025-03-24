@@ -11,6 +11,8 @@ import java.util.HashMap;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+import static utils.KeyPairUtils.bytesToHex;
+
 public class Context {
     private static HashMap<String, Wallet> wallets = new HashMap<>();
     private static HashMap<String, Transaction> mempool = new HashMap<>();
@@ -22,7 +24,7 @@ public class Context {
         ECGenParameterSpec ecGenParameterSpec = new ECGenParameterSpec("secp256k1");
         keyPairGenerator.initialize(ecGenParameterSpec, secureRandom);
         KeyPair keyPair = keyPairGenerator.generateKeyPair();
-        String publicKey = Context.bytesToHex(keyPair.getPublic().getEncoded());
+        String publicKey = bytesToHex(keyPair.getPublic().getEncoded());
         Wallet wallet = new Wallet()
                         .setBalance(0)
                         .setNonce(0)
@@ -31,18 +33,6 @@ public class Context {
                         .setState("Active");
         Context.wallets.put(publicKey, wallet);
         return keyPair;
-    }
-
-    public static String bytesToHex(byte[] bytes) {
-        StringBuilder hexString = new StringBuilder(2 * bytes.length);
-        for (byte b : bytes) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) {
-                hexString.append('0');
-            }
-            hexString.append(hex);
-        }
-        return hexString.toString();
     }
 
     public HashMap<String, Wallet> wallets() {
@@ -59,6 +49,10 @@ public class Context {
 
     public void setMempool(HashMap<String, Transaction> mempool) {
         this.mempool = mempool;
+    }
+
+    public static void showWalletInfo(String publicKey) {
+        wallets.get(publicKey).showInfo();
     }
 
     public static void showWallets() {
