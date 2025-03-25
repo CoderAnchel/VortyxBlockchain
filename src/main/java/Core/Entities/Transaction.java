@@ -1,5 +1,7 @@
 package Core.Entities;
 
+import utils.KeyPairUtils;
+
 import java.security.PublicKey;
 import java.util.Date;
 
@@ -15,6 +17,14 @@ public class Transaction {
     private String data;
     private Double fee;
     private int numberOfComfirmations;
+
+    public String senderPublicKeyHex() {
+        return KeyPairUtils.base64ToHex(this.senderPublicKey);
+    }
+
+    public String reciverPublicKeyHex() {
+        return KeyPairUtils.base64ToHex(this.reciverPublicKey);
+    }
 
     public String HashID() {
         return HashID;

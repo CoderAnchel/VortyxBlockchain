@@ -1,5 +1,7 @@
 package Core.Entities;
 
+import utils.KeyPairUtils;
+
 import java.security.PublicKey;
 import java.util.ArrayList;
 
@@ -69,9 +71,13 @@ public class Wallet {
         return this;
     }
 
+    public String publicKeyHex() {
+        return KeyPairUtils.base64ToHex(this.publicKeyBase64);
+    }
+
     public void showInfo() {
         System.out.println("------------------------");
-        System.out.println("Wallet "+this.publicKey()+": ");
+        System.out.println("Wallet "+this.publicKeyHex()+": ");
         System.out.println("    Balance: "+this.balance());
         System.out.println("    Nonce: "+this.Nonce());
         System.out.println("    State: "+this.state());

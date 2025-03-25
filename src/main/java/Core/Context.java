@@ -24,6 +24,7 @@ import static utils.KeyPairUtils.bytesToHex;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import utils.KeyPairUtils;
 
 public class Context {
     private static HashMap<String, Wallet> wallets = new HashMap<>();
@@ -165,11 +166,18 @@ public class Context {
                 .setBalance(0)
                 .setNonce(0)
                 .setTransactions(new ArrayList<>())
-                .setPublicKey(publicKey)
+                .setPublicKey(KeyPairUtils.base64ToHex(publicKey))
                 .setState("Active")
                 .setPublicKeyBase64(publicKey);
 
         Context.wallets.put(publicKey, wallet);
+        Gson gson = new Gson();
+        try (FileWriter writer = new FileWriter("data/wallets.json", true)) {
+            gson.toJson(wallet, writer);
+            writer.write("\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return keyPair;
     }
 
@@ -189,11 +197,19 @@ public class Context {
                 .setBalance(100)
                 .setNonce(0)
                 .setTransactions(new ArrayList<>())
-                .setPublicKey(publicKey)
+                .setPublicKey(KeyPairUtils.base64ToHex(publicKey))
                 .setState("Active")
                 .setPublicKeyBase64(publicKey);
 
         Context.wallets.put(publicKey, wallet);
+
+        Gson gson = new Gson();
+        try (FileWriter writer = new FileWriter("data/wallets.json", true)) {
+            gson.toJson(wallet, writer);
+            writer.write("\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return keyPair;
     }
 
