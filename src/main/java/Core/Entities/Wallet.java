@@ -1,13 +1,24 @@
 package Core.Entities;
 
+import java.security.PublicKey;
 import java.util.ArrayList;
 
 public class Wallet {
     private String publicKey;
+    private String publicKeyBase64;
     private double balance;
     private ArrayList<Transaction> transactions;
     private int Nonce;
     private String state;
+
+    public String publicKeyBase64() {
+        return publicKeyBase64;
+    }
+
+    public Wallet setPublicKeyBase64(String publicKeyBase64) {
+        this.publicKeyBase64 = publicKeyBase64;
+        return this;
+    }
 
     public String publicKey() {
         return publicKey;

@@ -1,5 +1,6 @@
 package Core.Entities;
 
+import java.security.PublicKey;
 import java.util.Date;
 
 public class Transaction {
