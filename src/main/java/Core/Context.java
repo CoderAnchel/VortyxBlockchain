@@ -36,6 +36,7 @@ public class Context {
 
     public static void init() {
         Context.loadWalletsFromFile();
+        Context.loadTransactionsMEEMPOOLFromFile();
     }
 
 
@@ -80,6 +81,14 @@ public class Context {
             }
             System.out.println("Operation signed and verified!, moving to mempool");
             Context.mempool.put(transaction.HashID(), transaction);
+            transaction.setState("Meempool");
+            Gson gson = new Gson();
+            try (FileWriter writer = new FileWriter("data/transactions_MEEMPOOL.json", true)) {
+                gson.toJson(transaction, writer);
+                writer.write("\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } catch (InvalidKeyException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
@@ -144,6 +153,19 @@ public class Context {
             while ((line = reader.readLine()) != null) {
                 Wallet wallet = gson.fromJson(line, Wallet.class);
                 wallets.put(wallet.publicKey(), wallet);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void loadTransactionsMEEMPOOLFromFile() {
+        Gson gson = new Gson();
+        try(BufferedReader reader = new BufferedReader(new FileReader("data/transactions_MEEMPOOL.json"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                Transaction transaction = gson.fromJson(line, Transaction.class);
+                mempool.put(transaction.HashID(), transaction);
             }
         } catch (IOException e) {
             e.printStackTrace();

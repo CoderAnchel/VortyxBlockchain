@@ -33,11 +33,10 @@ public class Main {
                     "MIGNAgEAMBAGByqGSM49AgEGBSuBBAAKBHYwdAIBAQQgpJ/U+z9zGdLMmWAXz9ILSYE+92jE9L17X1PoXPpPJ7WgBwYFK4EEAAqhRANCAAQB86yPEvhfvHEzJhg8xJyJ9wdmzw9xKt72C9BY5L+YFrWOYLuoDXqtpQHak92KzAaVCQBZbuieE/eBH6D3lc/M", // sender private key
                     0.00002,     // value
                     "For you my friend!", // data
-                    0.00002      // fee
+                    0.000001      // fee
             );
 
             Context.showMempool();
-            Context.showWallets();
         } catch (Exception e) {
             e.printStackTrace();
         }
