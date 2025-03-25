@@ -6,6 +6,8 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
+import java.util.Base64;
+
 import static utils.KeyPairUtils.KeyPairAnalizer;
 
 public class Main {
@@ -14,27 +16,27 @@ public class Main {
         try {
             Context.init();
 
-            Context.addTransaction("3056301006072a8648ce3d020106052b8104000a034200047998c5f5339a91f7c327114a850c9dffeea1cfd6475f0571498b050decd64f70e8f3d4daaef207e69fcaca607453d8a2f1ad79d44cc93acd4d546c59e640a9c4",
-                    "3056301006072a8648ce3d020106052b8104000a034200043347fbaf8d012fae3e94d0278d685fb4932874138e5d733e156fe7fea6abeb9d869753356c8f2216ba0151df1fdc33e00a14fe5f4ff5643dff705e7e12304257",
-                    "MIGNAgEAMBAGByqGSM49AgEGBSuBBAAKBHYwdAIBAQQgj2q7zKQpDU3ek6igXrDxOvXpWlMsKMxn0RAtljC92HGgBwYFK4EEAAqhRANCAAR5mMX1M5qR98MnEUqFDJ3/7qHP1kdfBXFJiwUN7NZPcOjz1Nqu8gfmn8rKYHRT2KLxrXnUTMk6zU1UbFnmQKnE",
-                    0.00002,
-                    "For you my friend!",
-                    0.00002
+            // Generate wallets first
+            KeyPair wallet1 = Context.createGenesisWallet();
+            KeyPair wallet2 = Context.createWallet();
+
+            // Get public keys
+            String publicKey1 = Base64.getEncoder().encodeToString(wallet1.getPublic().getEncoded());
+            String publicKey2 = Base64.getEncoder().encodeToString(wallet2.getPublic().getEncoded());
+            String privateKey1 = Base64.getEncoder().encodeToString(wallet1.getPrivate().getEncoded());
+
+            // Add transaction between newly created wallets
+            Context.addTransaction(
+                    publicKey1,  // sender public key
+                    publicKey2,  // receiver public key
+                    privateKey1, // sender private key
+                    99,     // value
+                    "For you my friend!", // data
+                    0.00002      // fee
             );
 
             Context.showMempool();
-
-            //KeyPair wallet1 = Context.createGenesisWallet();
-            //KeyPairAnalizer(wallet1);
-            //System.out.println("-------------------");
-            //KeyPair wallet2 = Context.createWallet();
-            //KeyPairAnalizer(wallet2);
-
-            //Context.showWallets();
-
-            //String publicKey = KeyPairUtils.getPublickey(wallet1);
-            //System.out.println("Finding for wallet with publickey: "+publicKey);
-            //Context.showWalletInfo(publicKey);
+            Context.showWallets();
         } catch (Exception e) {
             e.printStackTrace();
         }

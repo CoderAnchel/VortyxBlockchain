@@ -22,6 +22,7 @@ import com.google.gson.Gson;
 import Exceptions.WalletException;
 import static utils.KeyPairUtils.bytesToHex;
 import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
 
 public class Context {
@@ -111,32 +112,29 @@ public class Context {
             X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
             KeyFactory kf = KeyFactory.getInstance("EC", "BC");
             return kf.generatePublic(spec);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Invalid Base64 encoding: " + e.getMessage());
-            throw e;
-        } catch (GeneralSecurityException e) {
-            System.err.println("Key generation error: " + e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
             throw e;
         }
     }
 
 
-    public static byte[] signTransaction(PrivateKey clavePrivada, String transactionData) throws
+    public static byte[] signTransaction(PrivateKey privateKey, String transactionData) throws
             NoSuchAlgorithmException, InvalidKeyException, SignatureException,
             NoSuchProviderException {
-        Signature sign = Signature.getInstance("SHA256withECDSA", "BC"); // Use Bouncy Castle provider
-        sign.initSign(clavePrivada);
-        sign.update(transactionData.getBytes());
+        Signature sign = Signature.getInstance("SHA256withECDSA", "BC");
+        sign.initSign(privateKey);
+        sign.update(transactionData.getBytes(StandardCharsets.UTF_8)); // Specify charset
         return sign.sign();
     }
 
         // Método para verificar
-    public static boolean verifySign(PublicKey clavePublica, String mensaje, byte[] firma) throws Exception {
-        Signature verificador = Signature.getInstance("SHA256withECDSA");
-        verificador.initVerify(clavePublica);
-        verificador.update(mensaje.getBytes());
-        return verificador.verify(firma);
-    }
+        public static boolean verifySign(PublicKey clavePublica, String mensaje, byte[] firma) throws Exception {
+            Signature verificador = Signature.getInstance("SHA256withECDSA", "BC"); // Explicitly use Bouncy Castle
+            verificador.initVerify(clavePublica);
+            verificador.update(mensaje.getBytes(StandardCharsets.UTF_8)); // Specify charset
+            return verificador.verify(firma);
+        }
 
     public static void loadWalletsFromFile() {
         Gson gson = new Gson();
@@ -152,66 +150,50 @@ public class Context {
     }
 
     public static KeyPair createWallet() throws Exception {
+        Security.addProvider(new BouncyCastleProvider()); // Ensure BC provider is added
         SecureRandom secureRandom = new SecureRandom();
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC", "BC");
         ECNamedCurveParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("secp256k1");
         keyPairGenerator.initialize(ecSpec, secureRandom);
         KeyPair keyPair = keyPairGenerator.generateKeyPair();
-        String publicKey = bytesToHex(keyPair.getPublic().getEncoded());
-        String publicKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        System.out.println("Public: "+publicKey);
-        System.out.println("Public b64: "+publicKeyBase64);
-        String privateKey = bytesToHex(keyPair.getPrivate().getEncoded());
-        String privateKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
-        System.out.println("Private: "+privateKey);
-        System.out.println("Private b64: "+privateKeyBase64);
-        Wallet wallet = new Wallet()
-                        .setBalance(0)
-                        .setNonce(0)
-                        .setTransactions(new ArrayList<>())
-                        .setPublicKey(publicKey)
-                        .setState("Active")
-                        .setPublicKeyBase64(publicKeyBase64);
-        Context.wallets.put(publicKey, wallet);
-        Gson gson = new Gson();
-        try(FileWriter writer = new FileWriter("data/wallets.json", true)) {
-            gson.toJson(wallet, writer);
-            writer.write("\n");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return keyPair;
-    }
 
-    public static KeyPair createGenesisWallet() throws Exception {
-        SecureRandom secureRandom = new SecureRandom();
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC", "BC");
-        ECGenParameterSpec ecGenParameterSpec = new ECGenParameterSpec("secp256k1");
-        keyPairGenerator.initialize(ecGenParameterSpec, secureRandom);
-        KeyPair keyPair = keyPairGenerator.generateKeyPair();
-        String publicKey = bytesToHex(keyPair.getPublic().getEncoded());
-        String publicKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        System.out.println("Public: "+publicKey);
-        System.out.println("Public b64: "+publicKeyBase64);
-        String privateKey = bytesToHex(keyPair.getPrivate().getEncoded());
-        String privateKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
-        System.out.println("Private: "+privateKey);
-        System.out.println("Private b64: "+privateKeyBase64);
+        // Use consistent encoding
+        String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
+        String privateKey = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
+
         Wallet wallet = new Wallet()
-                .setBalance(initialValue)
+                .setBalance(0)
                 .setNonce(0)
                 .setTransactions(new ArrayList<>())
                 .setPublicKey(publicKey)
                 .setState("Active")
-                .setPublicKeyBase64(publicKeyBase64);
+                .setPublicKeyBase64(publicKey);
+
         Context.wallets.put(publicKey, wallet);
-        Gson gson = new Gson();
-        try(FileWriter writer = new FileWriter("data/wallets.json", true)) {
-            gson.toJson(wallet, writer);
-            writer.write("\n");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        return keyPair;
+    }
+
+    public static KeyPair createGenesisWallet() throws Exception {
+        Security.addProvider(new BouncyCastleProvider()); // Ensure BC provider is added
+        SecureRandom secureRandom = new SecureRandom();
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC", "BC");
+        ECNamedCurveParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("secp256k1");
+        keyPairGenerator.initialize(ecSpec, secureRandom);
+        KeyPair keyPair = keyPairGenerator.generateKeyPair();
+
+        // Use consistent encoding
+        String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
+        String privateKey = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
+
+        Wallet wallet = new Wallet()
+                .setBalance(100)
+                .setNonce(0)
+                .setTransactions(new ArrayList<>())
+                .setPublicKey(publicKey)
+                .setState("Active")
+                .setPublicKeyBase64(publicKey);
+
+        Context.wallets.put(publicKey, wallet);
         return keyPair;
     }
 
