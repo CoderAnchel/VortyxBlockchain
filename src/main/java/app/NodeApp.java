@@ -1,17 +1,17 @@
+package app;
+
 import Core.Context;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import utils.KeyPairUtils;
-
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.Security;
 import java.util.Base64;
 
-import static utils.KeyPairUtils.KeyPairAnalizer;
-
-public class Main {
+@SpringBootApplication
+public class NodeApp {
     public static void main(String[] args) {
+        SpringApplication.run(NodeApp.class, args);
         Security.addProvider(new BouncyCastleProvider());
         try {
             Context.init();
