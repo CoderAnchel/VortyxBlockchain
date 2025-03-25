@@ -20,7 +20,6 @@ import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 
 import Exceptions.WalletException;
-import static utils.KeyPairUtils.bytesToHex;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
@@ -40,8 +39,7 @@ public class Context {
     }
 
 
-    public static void addTransaction(String senderPublicKey, String reciverPublicKey,
-                                String privateKey, double value, String data,double fee) throws Exception {
+    public static void addTransaction(String senderPublicKey, String reciverPublicKey, String privateKey, double value, String data,double fee) throws Exception {
         Wallet sender = wallets.get(senderPublicKey);
         Wallet reciver = wallets.get(reciverPublicKey);
         if(sender == null) {
