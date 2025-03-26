@@ -38,7 +38,7 @@ public class WalletController {
             Context.addTransaction(
                     transactionProposalDTO.senderPublicKey,
                     transactionProposalDTO.reciberPublicKey,
-                    transactionProposalDTO.senderPrivateKey, transactionProposalDTO.value,
+                    KeyPairUtils.hexToBase64(transactionProposalDTO.senderPrivateKey), transactionProposalDTO.value,
                     transactionProposalDTO.data, transactionProposalDTO.fee
             );
 
@@ -50,9 +50,9 @@ public class WalletController {
             transactionConfirmedDTO.value = transactionProposalDTO.value;
             transactionConfirmedDTO.reciberPublicKey = transactionProposalDTO.reciberPublicKey;
             transactionConfirmedDTO.senderPublicKey = transactionProposalDTO.senderPublicKey;
+            return transactionConfirmedDTO;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        return null;
     }
 }

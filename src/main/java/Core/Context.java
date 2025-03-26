@@ -43,13 +43,13 @@ public class Context {
     }
 
 
-    public static boolean CreateBlock() {
-        if (mempool.size() >= Context.transactionRate) {
-            Dotenv dotenv = Dotenv.load();
-            String PRIVATE = dotenv.get("PRIVATE_KEY");
+    public static boolean CreateBlock() throws WalletException {
+        System.out.println(MINER_PUBLIC_KEY);
+        if (mempool.size() >= Context.transactionRate && wallets.containsKey(MINER_PUBLIC_KEY)) {
             HashMap<String, Transaction> processingpool = new HashMap<>();
             Block block = new Block();
             int counter = 0;
+            String PRIVATE = Dotenv.load().get("PRIVATE_KEY");
             List<Transaction> transactionsToProcess = new ArrayList<>();
             for (Transaction transaction : mempool.values()) {
                 if (counter < transactionRate) {
@@ -106,6 +106,7 @@ public class Context {
 
             return true;
         }
+        System.out.println("Miner Wallet dosen't exist or not enough Trans in pool!");
         return false;
     }
 

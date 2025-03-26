@@ -4,6 +4,8 @@ import Core.Context;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import utils.KeyPairUtils;
+
 import java.security.KeyPair;
 import java.security.Security;
 import java.util.Base64;
@@ -22,7 +24,6 @@ public class NodeApp {
 
             // Get public keys
             String publicKey1 = Base64.getEncoder().encodeToString(wallet1.getPublic().getEncoded());
-            String publicKey2 = Base64.getEncoder().encodeToString(wallet2.getPublic().getEncoded());
             String privateKey1 = Base64.getEncoder().encodeToString(wallet1.getPrivate().getEncoded());
 
             // Add transaction between newly created wallets
