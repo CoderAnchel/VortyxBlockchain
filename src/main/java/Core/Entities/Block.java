@@ -5,7 +5,6 @@ import java.util.Date;
 
 public class Block {
     private Date timestamp;
-    private String data;
     private String previousHash;
     private String hash;
     private int nonce;
@@ -15,6 +14,9 @@ public class Block {
     private String miner;
     private double fee;
 
+    public Block() {
+        this.transactions = new ArrayList<>();
+    }
 
     public Date getTimestamp() {
         return timestamp;
@@ -22,14 +24,6 @@ public class Block {
 
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
-    }
-
-    public String getData() {
-        return data;
-    }
-
-    public void setData(String data) {
-        this.data = data;
     }
 
     public String getPreviousHash() {
@@ -46,5 +40,58 @@ public class Block {
 
     public void setHash(String hash) {
         this.hash = hash;
+    }
+
+    public double fee() {
+        return fee;
+    }
+
+    public void setFee(double fee) {
+        this.fee = fee;
+    }
+
+    public String miner() {
+        return miner;
+    }
+
+    public void setMiner(String miner) {
+        this.miner = miner;
+    }
+
+    public int position() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
+    public ArrayList<String> transactions() {
+        return transactions;
+    }
+
+    public void setTransactions(ArrayList<String> transactions) {
+        this.transactions = transactions;
+    }
+
+    public String merkleRoot() {
+        return merkleRoot;
+    }
+
+    public void setMerkleRoot(String merkleRoot) {
+        this.merkleRoot = merkleRoot;
+    }
+
+    public int nonce() {
+        return nonce;
+    }
+
+    public void setNonce(int nonce) {
+        this.nonce = nonce;
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + merkleRoot + miner + position + fee + nonce + previousHash + transactions;
     }
 }

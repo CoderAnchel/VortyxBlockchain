@@ -123,5 +123,6 @@ public class Transaction {
         System.out.println("    From: "+this.senderPublicKey());
         System.out.println("    To: "+this.reciverPublicKey());
         System.out.println("    Fee: "+this.fee());
+        System.out.println("    Timestampt: "+this.timestamp    );
     }
 }

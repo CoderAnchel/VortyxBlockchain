@@ -12,6 +12,7 @@ repositories {
 }
 
 dependencies {
+    implementation("io.github.cdimascio:java-dotenv:5.2.2")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation ("org.bouncycastle:bcprov-jdk15on:1.70")
     implementation("com.google.guava:guava:33.4.5-jre")

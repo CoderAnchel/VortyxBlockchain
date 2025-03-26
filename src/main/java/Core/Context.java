@@ -9,17 +9,15 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.*;
 import java.security.*;
 import java.security.spec.*;
-import java.util.Base64;
-import java.util.Date;
-import java.util.HashMap;
 
 import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 
 import Exceptions.WalletException;
+import io.github.cdimascio.dotenv.Dotenv;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
@@ -28,16 +26,144 @@ import utils.KeyPairUtils;
 public class Context {
     private static HashMap<String, Wallet> wallets = new HashMap<>();
     private static HashMap<String, Transaction> mempool = new HashMap<>();
+    private static HashMap<String, Transaction> confirmedTransactions = new HashMap<>();
     private static HashMap<String, Block> chain = new HashMap<>();
     private static int transactionRate = 10;
     private static int initialValue = 100;
+    private static final String MINER_PUBLIC_KEY = Dotenv.load().get("PUBLIC_KEY");
     //private static int transactionPerBlock;
 
     public static void init() {
         Context.loadWalletsFromFile();
         Context.loadTransactionsMEEMPOOLFromFile();
+        Context.loadBlocksFromFile();
+        while(true) {
+            boolean out = CreateBlock();
+            if (!out) {
+                break;
+            }
+        }
     }
 
+
+    public static boolean CreateBlock() {
+        if (mempool.size() >= Context.transactionRate) {
+            Dotenv dotenv = Dotenv.load();
+            String PRIVATE = dotenv.get("PRIVATE_KEY");
+            HashMap<String, Transaction> processingpool = new HashMap<>();
+            Block block = new Block();
+            int counter = 0;
+            List<Transaction> transactionsToProcess = new ArrayList<>();
+            for (Transaction transaction : mempool.values()) {
+                if (counter < transactionRate) {
+                    transactionsToProcess.add(transaction);
+                    counter++;
+                } else {
+                    break;
+                }
+            }
+            for (Transaction transaction : transactionsToProcess) {
+                Transaction tras = mempool.remove(transaction.HashID());
+                block.transactions().add(tras.HashID());
+                processingpool.put(tras.HashID(), tras);
+            }
+            block.setTimestamp(new Date());
+            block.setMerkleRoot(Context.calculateMerkleRoot(new ArrayList<>(processingpool.keySet())));
+            block.setMiner(Context.MINER_PUBLIC_KEY);
+            boolean found = false;
+            String sha256hex;
+            while (!found) {
+                sha256hex = Hashing.sha256()
+                        .hashString(block.toString(), StandardCharsets.UTF_8)
+                        .toString();
+                block.setNonce(block.nonce() + 1);
+                System.out.println("Mining...");
+                System.out.println(sha256hex);
+                if (sha256hex.startsWith("0000")) {
+                    System.out.println("Finded! ✅");
+                    block.setHash(sha256hex);
+                    found = true;
+                }
+            }
+            chain.put(block.getHash(), block);
+            Gson gson = new Gson();
+            try (FileWriter writer = new FileWriter("data/blocks.json", true)) {
+                gson.toJson(block, writer);
+                writer.write("\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            for (Transaction trans : processingpool.values()) {
+                confirmedTransactions.put(trans.HashID(), trans);
+                try (FileWriter writer = new FileWriter("data/transaction_VALIDATED.json", true)) {
+                    gson.toJson(trans, writer);
+                    writer.write("\n");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // Método para calcular hash SHA-256
+    private static String calculateHash(String data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data.getBytes("UTF-8"));
+
+            // Convertir a representación hexadecimal
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    // Método para construir el Merkle Root
+    public static String calculateMerkleRoot(List<String> transactions) {
+        // Si no hay transacciones, devolver hash nulo
+        if (transactions == null || transactions.isEmpty()) {
+            return "";
+        }
+
+        // Si solo hay una transacción, devolver su hash
+        while (transactions.size() > 1) {
+            List<String> newHashes = new ArrayList<>();
+
+            // Hacer hash de pares de hashes
+            for (int i = 0; i < transactions.size(); i += 2) {
+                String hash1 = transactions.get(i);
+                String hash2 = (i + 1 < transactions.size()) ? transactions.get(i + 1) : hash1;
+
+                // Concatenar y hacer hash de los pares
+                String combinedHash = calculateHash(hash1 + hash2);
+                newHashes.add(combinedHash);
+            }
+
+            // Actualizar lista de hashes
+            transactions = newHashes;
+        }
+
+        // Devolver el hash final (Merkle Root)
+        return transactions.get(0);
+    }
+
+    // Método para verificar una transacción en el Merkle Tree
+    public boolean verifyTransactionMerkle(List<String> transactions, String transaction,
+                                      String merkleRoot) {
+        // Calcular el Merkle Root actual
+        String calculatedMerkleRoot = calculateMerkleRoot(transactions);
+
+        // Comparar con el Merkle Root proporcionado
+        return calculatedMerkleRoot.equals(merkleRoot);
+    }
 
     public static void addTransaction(String senderPublicKey, String reciverPublicKey, String privateKey, double value, String data,double fee) throws Exception {
         Wallet sender = wallets.get(senderPublicKey);
@@ -136,13 +262,13 @@ public class Context {
         return sign.sign();
     }
 
-        // Método para verificar
-        public static boolean verifySign(PublicKey clavePublica, String mensaje, byte[] firma) throws Exception {
-            Signature verificador = Signature.getInstance("SHA256withECDSA", "BC"); // Explicitly use Bouncy Castle
-            verificador.initVerify(clavePublica);
-            verificador.update(mensaje.getBytes(StandardCharsets.UTF_8)); // Specify charset
-            return verificador.verify(firma);
-        }
+    // Método para verificar
+    public static boolean verifySign(PublicKey clavePublica, String mensaje, byte[] firma) throws Exception {
+        Signature verificador = Signature.getInstance("SHA256withECDSA", "BC"); // Explicitly use Bouncy Castle
+        verificador.initVerify(clavePublica);
+        verificador.update(mensaje.getBytes(StandardCharsets.UTF_8)); // Specify charset
+        return verificador.verify(firma);
+    }
 
     public static void loadWalletsFromFile() {
         Gson gson = new Gson();
@@ -158,6 +284,19 @@ public class Context {
     }
 
     public static void loadTransactionsMEEMPOOLFromFile() {
+        Gson gson = new Gson();
+        try(BufferedReader reader = new BufferedReader(new FileReader("data/blocks.json"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                Block block = gson.fromJson(line, Block.class);
+                chain.put(block.getHash(), block);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void loadBlocksFromFile() {
         Gson gson = new Gson();
         try(BufferedReader reader = new BufferedReader(new FileReader("data/transactions_MEEMPOOL.json"))) {
             String line;
@@ -214,7 +353,7 @@ public class Context {
         String privateKey = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
 
         Wallet wallet = new Wallet()
-                .setBalance(100)
+                .setBalance(initialValue)
                 .setNonce(0)
                 .setTransactions(new ArrayList<>())
                 .setPublicKey(KeyPairUtils.base64ToHex(publicKey))
