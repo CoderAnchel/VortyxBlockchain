@@ -4,10 +4,7 @@ import Core.Entities.Block;
 import Core.Entities.Transaction;
 import Core.Entities.Wallet;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.security.*;
@@ -70,20 +67,13 @@ public class Context {
             block.setTimestamp(new Date());
             block.setMerkleRoot(Context.calculateMerkleRoot(new ArrayList<>(processingpool.keySet())));
             block.setMiner(Context.MINER_PUBLIC_KEY);
-            boolean found = false;
-            String sha256hex;
-            while (!found) {
-                sha256hex = Hashing.sha256()
-                        .hashString(block.toString(), StandardCharsets.UTF_8)
-                        .toString();
-                block.setNonce(block.nonce() + 1);
-                System.out.println("Mining...");
-                System.out.println(sha256hex);
-                if (sha256hex.startsWith("0000")) {
-                    System.out.println("Finded! ✅");
-                    block.setHash(sha256hex);
-                    found = true;
-                }
+            // Use dynamic difficulty (adjustable)
+            int difficulty = 4; // Can be made configurable
+            boolean minedSuccessfully = mineBlock(block, difficulty);
+
+            if (!minedSuccessfully) {
+                System.out.println("Block mining failed.");
+                return false;
             }
             chain.put(block.getHash(), block);
             Gson gson = new Gson();
@@ -93,8 +83,12 @@ public class Context {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            Set<String> processedTransactionHashes = new HashSet<>();
+            List<Transaction> toDelete = new ArrayList<>();
             for (Transaction trans : processingpool.values()) {
                 confirmedTransactions.put(trans.HashID(), trans);
+                toDelete.add(trans);
+                processedTransactionHashes.add(trans.HashID());
                 try (FileWriter writer = new FileWriter("data/transaction_VALIDATED.json", true)) {
                     gson.toJson(trans, writer);
                     writer.write("\n");
@@ -102,9 +96,101 @@ public class Context {
                     e.printStackTrace();
                 }
             }
+
+            for (Transaction trans : toDelete) {
+                processingpool.remove(trans.HashID());
+            }
+
+            // Update mempool file, removing processed transactions
+            updateMempoolFile(processedTransactionHashes);
+
             return true;
         }
         return false;
+    }
+
+    public static boolean mineBlock(Block block, int difficulty) {
+        // Start time for mining performance tracking
+        long startTime = System.currentTimeMillis();
+
+        // Difficulty prefix generation
+        String difficultyPrefix = "0".repeat(difficulty);
+
+        long nonce = 0;
+        String sha256hex;
+
+        while (true) {
+            // Include nonce in the hash calculation to prevent caching
+            sha256hex = Hashing.sha256()
+                    .hashString(block.toString() + nonce, StandardCharsets.UTF_8)
+                    .toString();
+
+            // Performance and debug logging
+            if (nonce % 100000 == 0) {
+                System.out.printf("Mining... (Nonce: %d, Current Hash: %s)%n", nonce, sha256hex);
+            }
+
+            // Check if hash meets difficulty requirement
+            if (sha256hex.startsWith(difficultyPrefix)) {
+                System.out.printf("Block mined! ✅%n");
+                System.out.printf("Nonce: %d%n", nonce);
+                System.out.printf("Hash: %s%n", sha256hex);
+
+                // Calculate and log mining time
+                long miningTime = System.currentTimeMillis() - startTime;
+                System.out.printf("Mining Time: %d ms%n", miningTime);
+
+                block.setHash(sha256hex);
+                block.setNonce((int)nonce);
+                return true;
+            }
+
+            nonce++;
+
+            // Optional: Add a timeout or max nonce to prevent infinite loops
+            //if (nonce > Long.MAX_VALUE - 1000) {
+              //  System.out.println("Max nonce reached. Resetting.");
+                //return false;
+            //}
+        }
+    }
+
+    public static void updateMempoolFile(Set<String> processedTransactionHashes) {
+        try {
+            File inputFile = new File("data/transactions_MEEMPOOL.json");
+            File tempFile = new File("data/transactions_MEEMPOOL_temp.json");
+
+            BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
+
+            Gson gson = new Gson();
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                // Parse each line to check its hash
+                Transaction transaction = gson.fromJson(line, Transaction.class);
+
+                // Only write the line if it's not in the processed transactions
+                if (!processedTransactionHashes.contains(transaction.HashID())) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+
+            reader.close();
+            writer.close();
+
+            // Replace the original file
+            if (inputFile.delete()) {
+                if (!tempFile.renameTo(inputFile)) {
+                    System.err.println("Could not rename temporary file");
+                }
+            } else {
+                System.err.println("Could not delete original mempool file");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // Método para calcular hash SHA-256
