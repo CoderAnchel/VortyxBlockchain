@@ -1,9 +1,14 @@
 package Core.Entities;
 
+import org.web3j.rlp.RlpEncoder;
+import org.web3j.rlp.RlpList;
+import org.web3j.rlp.RlpString;
+import org.web3j.rlp.RlpType;
 import utils.KeyPairUtils;
 
 import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Wallet {
     private String publicKey;
@@ -12,6 +17,19 @@ public class Wallet {
     private ArrayList<Transaction> transactions;
     private int Nonce;
     private String state;
+
+    public Wallet() {
+
+    }
+
+    public Wallet(String publicKey, String publicKeyBase64, double balance, ArrayList<Transaction> transactions, int nonce, String state) {
+        this.publicKey = publicKey;
+        this.publicKeyBase64 = publicKeyBase64;
+        this.balance = balance;
+        this.transactions = transactions;
+        Nonce = nonce;
+        this.state = state;
+    }
 
     public String publicKeyBase64() {
         return publicKeyBase64;
@@ -96,4 +114,24 @@ public class Wallet {
             System.out.println("       Number of Confirmations: " + transaction.numberOfComfirmations());
         }
     }
+
+    public byte[] toRLP() {
+        List<RlpType> walletElements = new ArrayList<>();
+        walletElements.add(RlpString.create(this.publicKey));
+        walletElements.add(RlpString.create(this.publicKeyBase64));
+        walletElements.add(RlpString.create(Double.toString(this.balance)));
+
+        List<RlpType> walletTransactions = new ArrayList<>();
+        for (Transaction tx : this.transactions) {
+            walletTransactions.add(RlpString.create(tx.toRLP()));
+        }
+
+        walletElements.add(new RlpList(walletTransactions));
+        walletElements.add(RlpString.create(Integer.toString(this.Nonce)));
+        walletElements.add(RlpString.create(this.state));
+
+        return RlpEncoder.encode(new RlpList(walletElements));
+    }
+
+
 }
