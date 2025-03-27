@@ -18,23 +18,24 @@ public class rlpUtils {
     // Método de deserialización correspondiente
     public static Wallet WalletfromRLP(byte[] rlpData) throws ParseException {
         RlpList decoded = RlpDecoder.decode(rlpData);
-        List<RlpType> values = decoded.getValues();
+        RlpList walletList = (RlpList) decoded.getValues().get(0);
+        List<RlpType> values = walletList.getValues();
 
-        String publicKey = ((RlpString)values.get(0)).asString();
-        String publicKeyBase64 = ((RlpString)values.get(1)).asString();
-        double balance = Double.parseDouble(((RlpString)values.get(2)).asString());
+        // More robust conversion
+        String publicKey = new String(((RlpString) values.get(0)).getBytes());
+        String publicKeyBase64 = new String(((RlpString) values.get(1)).getBytes());
+        double balance = Double.parseDouble(new String(((RlpString) values.get(2)).getBytes()));
 
-        // Deserializar lista de transacciones
+        // Deserialize transactions
         ArrayList<Transaction> transactions = new ArrayList<>();
-        RlpList txList = (RlpList)values.get(3);
+        RlpList txList = (RlpList) values.get(3);
         for (RlpType txRlp : txList.getValues()) {
-            // Deserializar directamente desde los bytes RLP
-            byte[] txBytes = ((RlpString)txRlp).getBytes();
+            byte[] txBytes = ((RlpString) txRlp).getBytes();
             transactions.add(rlpUtils.TransactionfromRLP(txBytes));
         }
 
-        int nonce = Integer.parseInt(((RlpString)values.get(4)).asString());
-        String state = ((RlpString)values.get(5)).asString();
+        int nonce = Integer.parseInt(new String(((RlpString) values.get(4)).getBytes()));
+        String state = new String(((RlpString) values.get(5)).getBytes());
 
         return new Wallet(publicKey, publicKeyBase64, balance, transactions, nonce, state);
     }

@@ -1,30 +1,11 @@
-Para guardar un objeto en LevelDB usando Java, necesitarás seguir algunos pasos. Te mostraré una implementación sencilla usando la biblioteca leveldb-java.
+# RLP
+Encoding Conversion: When converting some values (like balance, nonce), you're converting to strings before RLP encoding. This might lead to inconsistent serialization.
+State Encoding: The state seems to be getting encoded differently. In the original object, it appears as "Active", but after RLP process, it shows as "0x416374697665" (hex-encoded ASCII for "Active").
+Public Key Representation: There's a noticeable difference in the public key hex representation before and after RLP processing.
 
-Para usar este código, necesitarás agregar la dependencia de LevelDB a tu proyecto. Si usas Maven, puedes agregar esto a tu pom.xml:
-xmlCopy<dependency>
-<groupId>org.iq80.leveldb</groupId>
-<artifactId>leveldb</artifactId>
-<version>0.12</version>
-</dependency>
-<dependency>
-<groupId>org.iq80.leveldb</groupId>
-<artifactId>leveldb-api</artifactId>
-<version>0.12</version>
-</dependency>
-Explicación de los pasos principales:
+Recommendations:
 
-Crear una instancia de base de datos LevelDB
-Serializar el objeto a un array de bytes
-Guardar los bytes usando una clave
-Recuperar y deserializar el objeto cuando sea necesario
-
-Puntos importantes:
-
-El objeto debe implementar Serializable
-Maneja la serialización y deserialización automáticamente
-Incluye métodos para guardar y recuperar objetos
-Cierra correctamente la base de datos
-
-¿Necesitas que te explique alguna parte del código con más detalle?
-
+Consider using consistent encoding methods for numeric and string values.
+Implement a more robust conversion method for the state.
+Ensure that your toRLP() and WalletfromRLP() methods handle type conversions precisely.
 

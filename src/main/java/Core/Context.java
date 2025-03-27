@@ -10,6 +10,7 @@ import java.util.*;
 import java.security.*;
 import java.security.spec.*;
 
+import app.DTOS.KeyPairWalletDTO;
 import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 
@@ -29,8 +30,10 @@ public class Context {
     private static int initialValue = 100;
     private static final String MINER_PUBLIC_KEY = Dotenv.load().get("PUBLIC_KEY");
     //private static int transactionPerBlock;
+    private static BlockchainStorage blockchainStorage;
 
     public static void init() {
+        Context.blockchainStorage = new BlockchainStorage("database/wallets");
         Context.loadWalletsFromFile();
         Context.loadTransactionsMEEMPOOLFromFile();
         Context.loadBlocksFromFile();
@@ -427,6 +430,39 @@ public class Context {
         return keyPair;
     }
 
+    public static KeyPairWalletDTO createWalletIns() throws Exception {
+        Security.addProvider(new BouncyCastleProvider()); // Ensure BC provider is added
+        SecureRandom secureRandom = new SecureRandom();
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC", "BC");
+        ECNamedCurveParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("secp256k1");
+        keyPairGenerator.initialize(ecSpec, secureRandom);
+        KeyPair keyPair = keyPairGenerator.generateKeyPair();
+
+        // Use consistent encoding
+        String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
+        String privateKey = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
+
+        Wallet wallet = new Wallet()
+                .setBalance(0)
+                .setNonce(0)
+                .setTransactions(new ArrayList<>())
+                .setPublicKey(KeyPairUtils.base64ToHex(publicKey))
+                .setState("Active")
+                .setPublicKeyBase64(publicKey);
+
+        Context.wallets.put(publicKey, wallet);
+        Context.blockchainStorage.saveWallet(wallet);
+        Gson gson = new Gson();
+        try (FileWriter writer = new FileWriter("data/wallets.json", true)) {
+            gson.toJson(wallet, writer);
+            writer.write("\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new KeyPairWalletDTO(keyPair, wallet);
+    }
+
+
     public static KeyPair createGenesisWallet() throws Exception {
         Security.addProvider(new BouncyCastleProvider()); // Ensure BC provider is added
         SecureRandom secureRandom = new SecureRandom();
@@ -457,6 +493,10 @@ public class Context {
             e.printStackTrace();
         }
         return keyPair;
+    }
+
+    public static Wallet getWalletFrmoLevel(String publicKeyHex) {
+        return Context.blockchainStorage.getWallet(publicKeyHex);
     }
 
     public static int transactionRate() {

@@ -117,18 +117,23 @@ public class Wallet {
 
     public byte[] toRLP() {
         List<RlpType> walletElements = new ArrayList<>();
-        walletElements.add(RlpString.create(this.publicKey));
-        walletElements.add(RlpString.create(this.publicKeyBase64));
-        walletElements.add(RlpString.create(Double.toString(this.balance)));
 
+        // Use byte arrays or consistent string representations
+        walletElements.add(RlpString.create(this.publicKey.getBytes()));
+        walletElements.add(RlpString.create(this.publicKeyBase64.getBytes()));
+        walletElements.add(RlpString.create(String.valueOf(this.balance)));
+
+        // Serialize transactions
         List<RlpType> walletTransactions = new ArrayList<>();
         for (Transaction tx : this.transactions) {
             walletTransactions.add(RlpString.create(tx.toRLP()));
         }
 
         walletElements.add(new RlpList(walletTransactions));
-        walletElements.add(RlpString.create(Integer.toString(this.Nonce)));
-        walletElements.add(RlpString.create(this.state));
+        walletElements.add(RlpString.create(String.valueOf(this.Nonce)));
+
+        // Ensure consistent state encoding
+        walletElements.add(RlpString.create(this.state.getBytes()));
 
         return RlpEncoder.encode(new RlpList(walletElements));
     }

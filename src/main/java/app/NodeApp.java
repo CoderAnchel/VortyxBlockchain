@@ -1,10 +1,13 @@
 package app;
 
 import Core.Context;
+import Core.Entities.Wallet;
+import app.DTOS.KeyPairWalletDTO;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import utils.KeyPairUtils;
+import utils.rlpUtils;
 
 import java.security.KeyPair;
 import java.security.Security;
@@ -37,6 +40,22 @@ public class NodeApp {
             );
 
             Context.showMempool();
+
+
+            KeyPairWalletDTO testWallet = Context.createWalletIns();
+            System.out.println("TESTING PUBLIC: "+KeyPairUtils.base64ToHex(Base64.getEncoder().encodeToString(testWallet.getKeyPair().getPublic().getEncoded())));
+            System.out.println("TESTING PRIVATE: "+KeyPairUtils.base64ToHex(Base64.getEncoder().encodeToString(testWallet.getKeyPair().getPrivate().getEncoded())));
+            System.out.println("TESTING WALLET BEFORE RLP: ");
+            testWallet.getWallet().showInfo();
+            byte[] rlpWallet = testWallet.getWallet().toRLP();
+            System.out.println("RLP COONVERTED!: "+rlpWallet);
+            System.out.println("TESTING WALLET AFTER RLP: ");
+            Wallet walletConverted = rlpUtils.WalletfromRLP(rlpWallet);
+            walletConverted.showInfo();
+
+            System.out.println("GETTING IT FROM LEVEEEL!!!!!!");
+            Context.getWalletFrmoLevel(KeyPairUtils.base64ToHex(Base64.getEncoder().encodeToString(testWallet.getKeyPair().getPublic().getEncoded()))).showInfo();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
