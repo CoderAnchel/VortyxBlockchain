@@ -55,4 +55,14 @@ public class BlockchainStorage {
             throw new RuntimeException("Error retrieving wallet from LevelDB", e);
         }
     }
+
+    // Delete a wallet from LevelDB
+    public void deleteWallet(String publicKeyHex) {
+        try {
+            byte[] key = publicKeyHex.getBytes();
+            database.delete(key);
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting wallet from LevelDB", e);
+        }
+    }
 }

@@ -153,17 +153,17 @@ public class Transaction {
 
     public byte[] toRLP() {
         List<RlpType> walletElements = new ArrayList<>();
-        walletElements.add(RlpString.create(this.HashID));
-        walletElements.add(RlpString.create(this.senderPublicKey));
-        walletElements.add(RlpString.create(this.reciverPublicKey));
-        walletElements.add(RlpString.create(this.blockHash));
-        walletElements.add(RlpString.create(this.state));
+        walletElements.add(RlpString.create(this.HashID.getBytes()));
+        walletElements.add(RlpString.create(this.senderPublicKey.getBytes()));
+        walletElements.add(RlpString.create(this.reciverPublicKey.getBytes()));
+        walletElements.add(RlpString.create(this.blockHash.getBytes()));
+        walletElements.add(RlpString.create(this.state.getBytes()));
         walletElements.add(RlpString.create(Double.toString(this.value)));
         walletElements.add(RlpString.create(Integer.toString(this.nonce)));
         walletElements.add(RlpString.create(this.timestamp.toString()));
-        walletElements.add(RlpString.create(this.data));
-        walletElements.add(RlpString.create(Double.toString(this.fee)));
-        walletElements.add(RlpString.create(Integer.toString(this.numberOfComfirmations)));
+        walletElements.add(RlpString.create(this.data.getBytes()));
+        walletElements.add(RlpString.create(String.valueOf(this.fee)));
+        walletElements.add(RlpString.create(String.valueOf(this.numberOfComfirmations)));
         return RlpEncoder.encode(new RlpList(walletElements));
     }
 }

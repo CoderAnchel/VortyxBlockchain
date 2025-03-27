@@ -1,7 +1,13 @@
 package Core.Entities;
 
+import org.web3j.rlp.RlpEncoder;
+import org.web3j.rlp.RlpList;
+import org.web3j.rlp.RlpString;
+import org.web3j.rlp.RlpType;
+
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class Block {
     private Date timestamp;
@@ -88,6 +94,28 @@ public class Block {
 
     public void setNonce(int nonce) {
         this.nonce = nonce;
+    }
+
+
+    public byte[] toRLP() {
+        List<RlpType> blockElements = new ArrayList<>();
+        blockElements.add(RlpString.create(this.timestamp.toString()));
+        blockElements.add(RlpString.create(this.previousHash.getBytes()));
+        blockElements.add(RlpString.create(this.hash.getBytes()));
+        blockElements.add(RlpString.create(String.valueOf(this.nonce)));
+        blockElements.add(RlpString.create(this.merkleRoot.getBytes()));
+
+        List<RlpType> transactions = new ArrayList<>();
+        for (String tx: this.transactions) {
+            transactions.add(RlpString.create(tx.getBytes()));
+        }
+
+        blockElements.add(new RlpList(transactions));
+        blockElements.add(RlpString.create(String.valueOf(this.position)));
+        blockElements.add(RlpString.create(miner.getBytes()));
+        blockElements.add(RlpString.create(String.valueOf(fee)));
+
+        return RlpEncoder.encode(new RlpList(blockElements));
     }
 
     @Override
