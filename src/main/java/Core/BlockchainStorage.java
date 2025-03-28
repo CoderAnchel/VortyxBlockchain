@@ -18,6 +18,13 @@ public class BlockchainStorage {
     private DB transactionDatabase;
     private DB blocksDatabase;
 
+    public enum Types {
+        WALLETS,
+        MEMPOOL,
+        TRANSACTIONS,
+        BLOCKS;
+    }
+
     public BlockchainStorage(String dbpath) {
         Options options = new Options();
         options.createIfMissing(true);
@@ -73,6 +80,38 @@ public class BlockchainStorage {
         }
     }
 
+    public void saveTransactionMempoool(Transaction tx) {
+        try {
+            byte[] key = tx.HashID().getBytes();
+            byte[] walletData = tx.toRLP();
+            this.mempoolDatabase.put(key, walletData);
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving transaction to LevelDB", e);
+        }
+    }
+
+    public void deleteTransactionMempool(String publicKeyHex) {
+        try {
+            byte[] key = publicKeyHex.getBytes();
+            this.transactionDatabase.delete(key);
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting transaction from LevelDB", e);
+        }
+    }
+
+    public Transaction getTransactionMempool(String publicKeyHex) {
+        try {
+            byte[] key = publicKeyHex.getBytes();
+            byte[] response = this.transactionDatabase.get(key);
+            if (response == null) {
+                return null;
+            }
+            return rlpUtils.TransactionfromRLP(response);
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting transaction from LevelDB", e);
+        }
+    }
+
     public void saveTransaction(Transaction tx) {
         try {
             byte[] key = tx.HashID().getBytes();
@@ -103,5 +142,26 @@ public class BlockchainStorage {
         } catch (Exception e) {
             throw new RuntimeException("Error deleting transaction from LevelDB", e);
         }
+    }
+
+    public int getDatabaseSize(Types type) {
+        DB database = switch (type) {
+            case WALLETS -> walletsDatabase;
+            case MEMPOOL -> mempoolDatabase;
+            case TRANSACTIONS -> transactionDatabase;
+            case BLOCKS -> blocksDatabase;
+            default -> throw new IllegalArgumentException("Unknown database type: " + type);
+        };
+
+        int size = 0;
+        try (DBIterator iterator = database.iterator()) {
+            while (iterator.hasNext()) {
+                iterator.next();
+                size++;
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Error getting database size", e);
+        }
+        return size;
     }
 }

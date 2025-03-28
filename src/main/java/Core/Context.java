@@ -52,6 +52,7 @@ public class Context {
             HashMap<String, Transaction> processingpool = new HashMap<>();
             Block block = new Block();
             int counter = 0;
+           //miner signs is hown transaction for reciving the money
             String PRIVATE = Dotenv.load().get("PRIVATE_KEY");
             List<Transaction> transactionsToProcess = new ArrayList<>();
             for (Transaction transaction : mempool.values()) {
@@ -296,8 +297,9 @@ public class Context {
             System.out.println("Operation signed and verified!, moving to mempool");
             Context.mempool.put(transaction.HashID(), transaction);
             transaction.setState("Meempool");
+            Context.blockchainStorage.saveTransactionMempoool(transaction);
             Gson gson = new Gson();
-            Context.blockchainStorage.saveTransaction(transaction);
+            Context.CreateBlock();
             try (FileWriter writer = new FileWriter("data/transactions_MEEMPOOL.json", true)) {
                 gson.toJson(transaction, writer);
                 writer.write("\n");
@@ -497,12 +499,16 @@ public class Context {
         return keyPair;
     }
 
+    public static int getDatabaseSize(BlockchainStorage.Types type) {
+        return Context.blockchainStorage.getDatabaseSize(type);
+    }
+
     public static Wallet getWalletFrmoLevel(String publicKeyHex) {
         return Context.blockchainStorage.getWallet(publicKeyHex);
     }
 
     public static Transaction getTransactionFromLevel(String txHash) {
-        return Context.blockchainStorage.getTransaction(txHash);
+        return Context.blockchainStorage.getTransactionMempool(txHash);
     }
 
     public static int transactionRate() {

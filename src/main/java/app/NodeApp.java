@@ -1,5 +1,6 @@
 package app;
 
+import Core.BlockchainStorage;
 import Core.Context;
 import Core.Entities.Transaction;
 import Core.Entities.Wallet;
@@ -62,6 +63,9 @@ public class NodeApp {
             Transaction transaction = Context.getTransactionFromLevel(
                     "f173846b45382e3e3f4a9774d4d72ceaef316f7fbff0ffb24c003ac997fb72fa");
             transaction.showInfo();
+
+            System.out.println("Wallets size: "+Context.getDatabaseSize(BlockchainStorage.Types.WALLETS));
+            System.out.println("Mempool size: "+Context.getDatabaseSize(BlockchainStorage.Types.MEMPOOL));
         } catch (Exception e) {
             e.printStackTrace();
         }
