@@ -9,6 +9,9 @@ import static org.iq80.leveldb.impl.Iq80DBFactory.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import static org.iq80.leveldb.impl.Iq80DBFactory.factory;
 
@@ -163,5 +166,30 @@ public class BlockchainStorage {
             throw new RuntimeException("Error getting database size", e);
         }
         return size;
+    }
+
+    public List<Transaction> getSliceOfTransactions(int portion, Types type) {
+        List<Transaction> transactions = new ArrayList<>();
+
+        DB database = switch (type) {
+            case WALLETS -> walletsDatabase;
+            case MEMPOOL -> mempoolDatabase;
+            case TRANSACTIONS -> transactionDatabase;
+            case BLOCKS -> blocksDatabase;
+            default -> throw new IllegalArgumentException("Unknown database type: " + type);
+        };
+
+        try(DBIterator iterator = database.iterator()) {
+            int counter = 0;
+            while (iterator.hasNext() && counter < portion) {
+                Map.Entry<byte[], byte[]> entry = iterator.next();
+                Transaction transaction = rlpUtils.TransactionfromRLP(entry.getValue());
+                transactions.add(transaction);
+                counter++;
+            }
+            return transactions;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
