@@ -7,6 +7,7 @@ import org.web3j.rlp.RlpType;
 import utils.KeyPairUtils;
 
 import java.security.PublicKey;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -24,7 +25,9 @@ public class Transaction {
     private Double fee;
     private int numberOfComfirmations;
 
-    public Transaction(String hashID, String senderPublicKey, String reciverPublicKey, String blockHash, String state, double value, int nonce, Date timestamp, String data, Double fee, int numberOfComfirmations) {
+    public Transaction(String hashID, String senderPublicKey, String reciverPublicKey,
+                       String blockHash, String state, double value, int nonce, Date timestamp,
+                       String data, Double fee, int numberOfComfirmations) {
         HashID = hashID;
         this.senderPublicKey = senderPublicKey;
         this.reciverPublicKey = reciverPublicKey;
@@ -141,29 +144,43 @@ public class Transaction {
 
     public void showInfo() {
         System.out.println("------------------------");
-        System.out.println("Transaction "+this.HashID()+": ");
-        System.out.println("    value: "+this.value());
-        System.out.println("    Nonce: "+this.nonce());
-        System.out.println("    State: "+this.state());
-        System.out.println("    From: "+this.senderPublicKey());
-        System.out.println("    To: "+this.reciverPublicKey());
-        System.out.println("    Fee: "+this.fee());
-        System.out.println("    Timestampt: "+this.timestamp    );
+        System.out.println("Transaction " + this.HashID() + ": ");
+        System.out.println("    value: " + this.value());
+        System.out.println("    Nonce: " + this.nonce());
+        System.out.println("    State: " + this.state());
+        System.out.println("    From: " + this.senderPublicKey());
+        System.out.println("    To: " + this.reciverPublicKey());
+        System.out.println("    Fee: " + this.fee());
+        System.out.println("    Timestampt: " + this.timestamp);
     }
 
     public byte[] toRLP() {
-        List<RlpType> walletElements = new ArrayList<>();
-        walletElements.add(RlpString.create(this.HashID.getBytes()));
-        walletElements.add(RlpString.create(this.senderPublicKey.getBytes()));
-        walletElements.add(RlpString.create(this.reciverPublicKey.getBytes()));
-        walletElements.add(RlpString.create(this.blockHash.getBytes()));
-        walletElements.add(RlpString.create(this.state.getBytes()));
-        walletElements.add(RlpString.create(Double.toString(this.value)));
-        walletElements.add(RlpString.create(Integer.toString(this.nonce)));
-        walletElements.add(RlpString.create(this.timestamp.toString()));
-        walletElements.add(RlpString.create(this.data.getBytes()));
-        walletElements.add(RlpString.create(String.valueOf(this.fee)));
-        walletElements.add(RlpString.create(String.valueOf(this.numberOfComfirmations)));
-        return RlpEncoder.encode(new RlpList(walletElements));
+        List<RlpType> transactionElements = new ArrayList<>();
+
+        // Usar consistentemente String.valueOf() para todos los campos
+        transactionElements.add(RlpString.create(this.HashID != null ? this.HashID : ""));
+        transactionElements.add(
+                RlpString.create(this.senderPublicKey != null ? this.senderPublicKey : ""));
+        transactionElements.add(
+                RlpString.create(this.reciverPublicKey != null ? this.reciverPublicKey : ""));
+        transactionElements.add(RlpString.create(this.blockHash != null ? this.blockHash : ""));
+        transactionElements.add(RlpString.create(this.state != null ? this.state : "Mempool"));
+
+        // Convertir valores numéricos a String de manera consistente
+        transactionElements.add(RlpString.create(String.valueOf(this.value)));
+        transactionElements.add(RlpString.create(String.valueOf(this.nonce)));
+
+// Formato consistente para timestamp
+        String timestampStr = this.timestamp != null ?
+                new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(this.timestamp) :
+                new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(new Date());
+        transactionElements.add(RlpString.create(timestampStr));
+
+        // Resto de campos
+        transactionElements.add(RlpString.create(this.data != null ? this.data : ""));
+        transactionElements.add(RlpString.create(String.valueOf(this.fee)));
+        transactionElements.add(RlpString.create(String.valueOf(this.numberOfComfirmations)));
+
+        return RlpEncoder.encode(new RlpList(transactionElements));
     }
 }

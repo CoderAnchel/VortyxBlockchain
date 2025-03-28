@@ -1,5 +1,6 @@
 package Core;
 
+import Core.Entities.Transaction;
 import Core.Entities.Wallet;
 import org.iq80.leveldb.*;
 import utils.rlpUtils;
@@ -12,14 +13,20 @@ import java.io.IOException;
 import static org.iq80.leveldb.impl.Iq80DBFactory.factory;
 
 public class BlockchainStorage {
-    private DB database;
+    private DB walletsDatabase;
+    private DB mempoolDatabase;
+    private DB transactionDatabase;
+    private DB blocksDatabase;
 
     public BlockchainStorage(String dbpath) {
         Options options = new Options();
         options.createIfMissing(true);
 
         try {
-            database = factory.open(new File(dbpath), options);
+            walletsDatabase = factory.open(new File(dbpath+"wallets"), options);
+            mempoolDatabase = factory.open(new File(dbpath+"mempool"), options);
+            transactionDatabase = factory.open(new File(dbpath+"transactions"), options);
+            blocksDatabase = factory.open(new File(dbpath+"blocks"), options);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -34,7 +41,7 @@ public class BlockchainStorage {
             byte[] value = wallet.toRLP();
 
             // Write to LevelDB
-            database.put(key, value);
+            walletsDatabase.put(key, value);
         } catch (Exception e) {
             throw new RuntimeException("Error saving wallet to LevelDB", e);
         }
@@ -43,7 +50,7 @@ public class BlockchainStorage {
     public Wallet getWallet(String publicKeyHex) {
         try {
             byte[] key = publicKeyHex.getBytes();
-            byte[] walletData = database.get(key);
+            byte[] walletData = walletsDatabase.get(key);
 
             if (walletData == null) {
                 return null; // Wallet not found
@@ -60,9 +67,41 @@ public class BlockchainStorage {
     public void deleteWallet(String publicKeyHex) {
         try {
             byte[] key = publicKeyHex.getBytes();
-            database.delete(key);
+            walletsDatabase.delete(key);
         } catch (Exception e) {
             throw new RuntimeException("Error deleting wallet from LevelDB", e);
+        }
+    }
+
+    public void saveTransaction(Transaction tx) {
+        try {
+            byte[] key = tx.HashID().getBytes();
+            byte[] walletData = tx.toRLP();
+            this.transactionDatabase.put(key, walletData);
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving transaction to LevelDB", e);
+        }
+    }
+
+    public void deleteTransaction(String publicKeyHex) {
+        try {
+            byte[] key = publicKeyHex.getBytes();
+            this.transactionDatabase.delete(key);
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting transaction from LevelDB", e);
+        }
+    }
+
+    public Transaction getTransaction(String publicKeyHex) {
+        try {
+            byte[] key = publicKeyHex.getBytes();
+            byte[] response = this.transactionDatabase.get(key);
+            if (response == null) {
+                return null;
+            }
+            return rlpUtils.TransactionfromRLP(response);
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting transaction from LevelDB", e);
         }
     }
 }

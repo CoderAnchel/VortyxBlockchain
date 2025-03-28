@@ -33,7 +33,7 @@ public class Context {
     private static BlockchainStorage blockchainStorage;
 
     public static void init() {
-        Context.blockchainStorage = new BlockchainStorage("database/wallets");
+        Context.blockchainStorage = new BlockchainStorage("database/");
         Context.loadWalletsFromFile();
         Context.loadTransactionsMEEMPOOLFromFile();
         Context.loadBlocksFromFile();
@@ -297,6 +297,7 @@ public class Context {
             Context.mempool.put(transaction.HashID(), transaction);
             transaction.setState("Meempool");
             Gson gson = new Gson();
+            Context.blockchainStorage.saveTransaction(transaction);
             try (FileWriter writer = new FileWriter("data/transactions_MEEMPOOL.json", true)) {
                 gson.toJson(transaction, writer);
                 writer.write("\n");
@@ -420,6 +421,7 @@ public class Context {
                 .setPublicKeyBase64(publicKey);
 
         Context.wallets.put(publicKey, wallet);
+        Context.blockchainStorage.saveWallet(wallet);
         Gson gson = new Gson();
         try (FileWriter writer = new FileWriter("data/wallets.json", true)) {
             gson.toJson(wallet, writer);
@@ -484,7 +486,7 @@ public class Context {
                 .setPublicKeyBase64(publicKey);
 
         Context.wallets.put(publicKey, wallet);
-
+        Context.blockchainStorage.saveWallet(wallet);
         Gson gson = new Gson();
         try (FileWriter writer = new FileWriter("data/wallets.json", true)) {
             gson.toJson(wallet, writer);
@@ -497,6 +499,10 @@ public class Context {
 
     public static Wallet getWalletFrmoLevel(String publicKeyHex) {
         return Context.blockchainStorage.getWallet(publicKeyHex);
+    }
+
+    public static Transaction getTransactionFromLevel(String txHash) {
+        return Context.blockchainStorage.getTransaction(txHash);
     }
 
     public static int transactionRate() {

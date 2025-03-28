@@ -1,6 +1,7 @@
 package app;
 
 import Core.Context;
+import Core.Entities.Transaction;
 import Core.Entities.Wallet;
 import app.DTOS.KeyPairWalletDTO;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -56,6 +57,11 @@ public class NodeApp {
             System.out.println("GETTING IT FROM LEVEEEL!!!!!!");
             Context.getWalletFrmoLevel(KeyPairUtils.base64ToHex(Base64.getEncoder().encodeToString(testWallet.getKeyPair().getPublic().getEncoded()))).showInfo();
 
+            System.out.println("----------");
+            System.out.println("Transaction from level!!!");
+            Transaction transaction = Context.getTransactionFromLevel(
+                    "f173846b45382e3e3f4a9774d4d72ceaef316f7fbff0ffb24c003ac997fb72fa");
+            transaction.showInfo();
         } catch (Exception e) {
             e.printStackTrace();
         }
