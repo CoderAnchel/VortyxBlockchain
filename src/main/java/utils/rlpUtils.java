@@ -1,5 +1,6 @@
 package utils;
 
+import Core.Entities.Block;
 import Core.Entities.Transaction;
 import Core.Entities.Wallet;
 import org.web3j.rlp.RlpDecoder;
@@ -101,7 +102,7 @@ public class rlpUtils {
 
         String data = new String(((RlpString)values.get(8)).getBytes());
 
-        Double fee = 0.0;
+        double fee = 0.0;
         try {
             fee = Double.parseDouble(new String(((RlpString)values.get(9)).getBytes()));
         } catch (NumberFormatException e) {
@@ -116,5 +117,75 @@ public class rlpUtils {
         }
 
         return new Transaction(HashID, senderPublicKey, reciverPublicKey, blockHash, state, value, nonce, timestamp, data, fee, numberOfComfirmations);
+    }
+
+
+    public static Block BlockFromRLP(byte[] rlpData) {
+        RlpList decoded = RlpDecoder.decode(rlpData);
+        RlpList blockList = (RlpList) decoded.getValues().get(0);
+        List<RlpType> values = blockList.getValues();
+
+        Block block = new Block();
+        Date timestamp = new Date();
+        try {
+            String dateStr = new String(((RlpString)values.get(0)).getBytes());
+            // Intenta con varios formatos posibles
+            try {
+                // Formato ISO
+                SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                timestamp = isoFormat.parse(dateStr);
+            } catch (ParseException e1) {
+                try {
+                    // Formato JSON
+                    SimpleDateFormat jsonFormat = new SimpleDateFormat("MMM dd, yyyy, hh:mm:ss a", Locale.US);
+                    timestamp = jsonFormat.parse(dateStr);
+                } catch (ParseException e2) {
+                    try {
+                        // Formato toString() de Date
+                        SimpleDateFormat defaultFormat = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US);
+                        timestamp = defaultFormat.parse(dateStr);
+                    } catch (ParseException e3) {
+                        System.out.println("Error al parsear fecha: " + dateStr);
+                        throw e3;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error al parsear fecha, usando fecha actual: " + e.getMessage());
+            // e.printStackTrace();
+        }
+        block.setTimestamp(timestamp);
+        block.setPreviousHash(new String(((RlpString)values.get(1)).getBytes()));
+        block.setHash(new String(((RlpString)values.get(2)).getBytes()));
+        int nonce = 0;
+        try {
+            nonce = Integer.parseInt(new String(((RlpString)values.get(3)).getBytes()));
+        } catch (NumberFormatException e) {
+            System.out.println("Error al parsear nonce: " + new String(((RlpString)values.get(6)).getBytes()));
+        }
+        block.setNonce(nonce);
+        block.setMerkleRoot(new String(((RlpString)values.get(4)).getBytes()));
+        List<String> transactions = new ArrayList<>();
+        RlpList txList = (RlpList) values.get(5);
+        for (RlpType txRlp : txList.getValues()) {
+            transactions.add(new String(((RlpString) txRlp).getBytes()));
+        }
+        block.setTransactions(transactions);
+        int position = 0;
+        try {
+            position = Integer.parseInt(new String(((RlpString)values.get(6)).getBytes()));
+        } catch (NumberFormatException e) {
+            System.out.println("Error al parsear confirmaciones: " + new String(((RlpString)values.get(10)).getBytes()));
+        }
+        block.setPosition(position);
+        block.setMiner(new String(((RlpString)values.get(7)).getBytes()));
+        double fee = 0.0;
+        try {
+            fee = Double.parseDouble(new String(((RlpString)values.get(8)).getBytes()));
+        } catch (NumberFormatException e) {
+            System.out.println("Error al parsear fee: " + new String(((RlpString)values.get(9)).getBytes()));
+        }
+        block.setFee(fee);
+        return block;
     }
 }

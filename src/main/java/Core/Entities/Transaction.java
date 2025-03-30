@@ -151,7 +151,10 @@ public class Transaction {
         System.out.println("    From: " + this.senderPublicKey());
         System.out.println("    To: " + this.reciverPublicKey());
         System.out.println("    Fee: " + this.fee());
-        System.out.println("    Timestampt: " + this.timestamp);
+        System.out.println("    Timestamp: " + this.timestamp);
+        System.out.println("    Block Hash: " + this.blockHash());
+        System.out.println("    Number of Confirmations: " + this.numberOfComfirmations());
+        System.out.println("    Data: " + this.data());
     }
 
     public byte[] toRLP() {
@@ -182,5 +185,22 @@ public class Transaction {
         transactionElements.add(RlpString.create(String.valueOf(this.numberOfComfirmations)));
 
         return RlpEncoder.encode(new RlpList(transactionElements));
+    }
+
+    @Override
+    public String toString() {
+        return "Transaction{" +
+                "HashID='" + HashID + '\'' +
+                ", senderPublicKey='" + senderPublicKey + '\'' +
+                ", reciverPublicKey='" + reciverPublicKey + '\'' +
+                ", blockHash='" + blockHash + '\'' +
+                ", state='" + state + '\'' +
+                ", value=" + value +
+                ", nonce=" + nonce +
+                ", timestamp=" + new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(timestamp) +
+                ", data='" + data + '\'' +
+                ", fee=" + fee +
+                ", numberOfComfirmations=" + numberOfComfirmations +
+                '}';
     }
 }

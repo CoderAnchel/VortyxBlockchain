@@ -1,5 +1,6 @@
 package Core;
 
+import Core.Entities.Block;
 import Core.Entities.Transaction;
 import Core.Entities.Wallet;
 import org.iq80.leveldb.*;
@@ -9,6 +10,7 @@ import static org.iq80.leveldb.impl.Iq80DBFactory.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,18 @@ public class BlockchainStorage {
             blocksDatabase = factory.open(new File(dbpath+"blocks"), options);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public void saveBlock(Block block) {
+        try {
+            byte[] key = block.getHash().getBytes();
+            byte[] value = block.toRLP();
+
+            // Write to LevelDB
+            blocksDatabase.put(key, value);
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving wallet to LevelDB", e);
         }
     }
 
@@ -172,24 +186,108 @@ public class BlockchainStorage {
         List<Transaction> transactions = new ArrayList<>();
 
         DB database = switch (type) {
-            case WALLETS -> walletsDatabase;
             case MEMPOOL -> mempoolDatabase;
             case TRANSACTIONS -> transactionDatabase;
-            case BLOCKS -> blocksDatabase;
-            default -> throw new IllegalArgumentException("Unknown database type: " + type);
+            default -> throw new IllegalArgumentException("Tipo de base de datos inválido: " + type);
         };
 
         try(DBIterator iterator = database.iterator()) {
             int counter = 0;
+            iterator.seekToFirst();
+
+            // Verificar si hay elementos
+            if (!iterator.hasNext()) {
+                return transactions; // Devolver lista vacía si no hay elementos
+            }
+
             while (iterator.hasNext() && counter < portion) {
                 Map.Entry<byte[], byte[]> entry = iterator.next();
-                Transaction transaction = rlpUtils.TransactionfromRLP(entry.getValue());
-                transactions.add(transaction);
-                counter++;
+                byte[] value = entry.getValue();
+
+                // Verificar que el valor no es nulo ni vacío
+                if (value != null && value.length > 0) {
+                    try {
+                        Transaction transaction = rlpUtils.TransactionfromRLP(value);
+                        transactions.add(transaction);
+                        counter++;
+                    } catch (Exception e) {
+                        System.out.println("Error al deserializar transacción: " + e.getMessage());
+                        // Continuar con la siguiente transacción
+                    }
+                }
             }
             return transactions;
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public void showBlocks() {
+        try(DBIterator iterator = blocksDatabase.iterator()) {
+            while (iterator.hasNext()) {
+                Map.Entry<byte[], byte[]> entry = iterator.next();
+                Block block = rlpUtils.BlockFromRLP(entry.getValue());
+                System.out.println("Block "+block.getHash()+": "+"----------------");
+                System.out.println(block.toString());
+                System.out.println("TRANSACTIONS BLOCK :");
+                showTransactionsUsingLevel(block.transactions());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void showTransactionsUsingLevel(List<String> keys) throws ParseException {
+        for (String key : keys) {
+            byte[] txData = transactionDatabase.get(key.getBytes());
+            if (txData == null) {
+                System.out.println("Transacción no encontrada: " + key);
+                continue;
+            }
+
+            try {
+                Transaction tx = rlpUtils.TransactionfromRLP(txData);
+                tx.showInfo();
+            } catch (Exception e) {
+                System.out.println("Error al deserializar transacción " + key + ": " + e.getMessage());
+            }
+        }
+    }
+    public void deleteEntities(List<String> keys, Types type) {
+        DB database = switch (type) {
+            case BLOCKS -> blocksDatabase;
+            case MEMPOOL -> mempoolDatabase;
+            case TRANSACTIONS -> transactionDatabase;
+            case WALLETS -> walletsDatabase;
+            default -> throw new IllegalArgumentException("Unknown database type: " + type);
+        };
+
+        for(String key : keys) {
+            database.delete(key.getBytes());
+        };
+    }
+
+    public void addTransactionsToMempool(List<Transaction> transactions) {
+        for (Transaction transaction : transactions) {
+            try {
+                byte[] key = transaction.HashID().getBytes();
+                byte[] walletData = transaction.toRLP();
+                this.mempoolDatabase.put(key, walletData);
+            } catch (Exception e) {
+                throw new RuntimeException("Error saving transaction to LevelDB", e);
+            }
+        }
+    }
+
+    public void addTransactionsToDefinitive(List<Transaction> transactions) {
+        for (Transaction transaction : transactions) {
+            try {
+                byte[] key = transaction.HashID().getBytes();
+                byte[] walletData = transaction.toRLP();
+                this.transactionDatabase.put(key, walletData);
+            } catch (Exception e) {
+                throw new RuntimeException("Error saving transaction to LevelDB", e);
+            }
         }
     }
 }
