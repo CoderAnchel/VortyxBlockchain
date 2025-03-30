@@ -66,7 +66,7 @@ public class Context {
             block.setTransactions(IterationUtils.getTransKeys(transactions));
             block.setMerkleRoot(Context.calculateMerkleRoot(IterationUtils.getTransKeys(transactions)));
             // Use dynamic difficulty (adjustable)
-            int difficulty = 16; // Can be made configurable
+            int difficulty = 5; // Can be made configurable
             boolean minedSuccessfully = mineBlock(block, difficulty);
             if (!minedSuccessfully) {
                 System.out.println("Block mining failed.");
