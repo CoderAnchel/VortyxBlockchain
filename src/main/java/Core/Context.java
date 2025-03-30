@@ -10,6 +10,7 @@ import java.util.*;
 import java.security.*;
 import java.security.spec.*;
 
+import app.DTOS.KeyPairWalletDTO;
 import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 
@@ -18,6 +19,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import utils.IterationUtils;
 import utils.KeyPairUtils;
 
 public class Context {
@@ -29,26 +31,73 @@ public class Context {
     private static int initialValue = 100;
     private static final String MINER_PUBLIC_KEY = Dotenv.load().get("PUBLIC_KEY");
     //private static int transactionPerBlock;
+    private static BlockchainStorage blockchainStorage;
 
     public static void init() {
+        Context.blockchainStorage = new BlockchainStorage("database/");
         Context.loadWalletsFromFile();
         Context.loadTransactionsMEEMPOOLFromFile();
         Context.loadBlocksFromFile();
         while(true) {
-            boolean out = CreateBlock();
+            boolean out = buildBlock();
             if (!out) {
                 break;
             }
         }
     }
 
+    public static boolean buildBlock() {
+        String PRIVATE = Dotenv.load().get("PRIVATE_KEY");
+        Wallet minerWallet = Context.blockchainStorage.getWallet(Context.MINER_PUBLIC_KEY);
 
+        // Verificar tamaño del mempool primero
+        int mempoolSize = Context.blockchainStorage.getDatabaseSize(BlockchainStorage.Types.MEMPOOL);
+
+        if (minerWallet != null && Context.transactionRate <= mempoolSize) {
+            Block block = new Block();
+            block.setTimestamp(new Date());
+            block.setMiner(Context.MINER_PUBLIC_KEY);
+            block.setPreviousHash(""); // Inicializa previousHash con cadena vacía para el primer bloque
+            List<Transaction> transactions =
+                    Context.blockchainStorage.getSliceOfTransactions(Context.transactionRate - 1,
+                            BlockchainStorage.Types.MEMPOOL);
+            //deleting transactions from mempool
+            Context.blockchainStorage.deleteEntities(IterationUtils.getTransKeys(transactions), BlockchainStorage.Types.MEMPOOL );
+            block.setTransactions(IterationUtils.getTransKeys(transactions));
+            block.setMerkleRoot(Context.calculateMerkleRoot(IterationUtils.getTransKeys(transactions)));
+            // Use dynamic difficulty (adjustable)
+            int difficulty = 16; // Can be made configurable
+            boolean minedSuccessfully = mineBlock(block, difficulty);
+            if (!minedSuccessfully) {
+                System.out.println("Block mining failed.");
+                Context.blockchainStorage.addTransactionsToMempool(transactions);
+                return false;
+            }
+
+            for (Transaction transaction : transactions) {
+                transaction.setBlockHash(block.getHash());
+                transaction.setState("CONFIRMED");
+            }
+
+            Context.blockchainStorage.addTransactionsToDefinitive(transactions);
+            Context.blockchainStorage.saveBlock(block);
+            Context.blockchainStorage.showBlocks();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * /THIS METHOD IS DEPRECATED!!!!!
+     * @return
+     * @throws WalletException
+     */
     public static boolean CreateBlock() throws WalletException {
-        System.out.println(MINER_PUBLIC_KEY);
         if (mempool.size() >= Context.transactionRate && wallets.containsKey(MINER_PUBLIC_KEY)) {
             HashMap<String, Transaction> processingpool = new HashMap<>();
             Block block = new Block();
             int counter = 0;
+           //miner signs is hown transaction for reciving the money
             String PRIVATE = Dotenv.load().get("PRIVATE_KEY");
             List<Transaction> transactionsToProcess = new ArrayList<>();
             for (Transaction transaction : mempool.values()) {
@@ -68,7 +117,7 @@ public class Context {
             block.setMerkleRoot(Context.calculateMerkleRoot(new ArrayList<>(processingpool.keySet())));
             block.setMiner(Context.MINER_PUBLIC_KEY);
             // Use dynamic difficulty (adjustable)
-            int difficulty = 4; // Can be made configurable
+            int difficulty = 16; // Can be made configurable
             boolean minedSuccessfully = mineBlock(block, difficulty);
 
             if (!minedSuccessfully) {
@@ -121,6 +170,7 @@ public class Context {
         String sha256hex;
 
         while (true) {
+            System.out.println("mining...");
             // Include nonce in the hash calculation to prevent caching
             sha256hex = Hashing.sha256()
                     .hashString(block.toString() + nonce, StandardCharsets.UTF_8)
@@ -253,6 +303,8 @@ public class Context {
     }
 
     public static void addTransaction(String senderPublicKey, String reciverPublicKey, String privateKey, double value, String data,double fee) throws Exception {
+        System.out.println("Mempool size: "+Context.getDatabaseSize(BlockchainStorage.Types.MEMPOOL));
+        System.out.println("Blocks size: "+Context.getDatabaseSize(BlockchainStorage.Types.BLOCKS));
         Wallet sender = wallets.get(senderPublicKey);
         Wallet reciver = wallets.get(reciverPublicKey);
         if(sender == null) {
@@ -293,7 +345,9 @@ public class Context {
             System.out.println("Operation signed and verified!, moving to mempool");
             Context.mempool.put(transaction.HashID(), transaction);
             transaction.setState("Meempool");
+            Context.blockchainStorage.saveTransactionMempoool(transaction);
             Gson gson = new Gson();
+            Context.buildBlock();
             try (FileWriter writer = new FileWriter("data/transactions_MEEMPOOL.json", true)) {
                 gson.toJson(transaction, writer);
                 writer.write("\n");
@@ -417,6 +471,7 @@ public class Context {
                 .setPublicKeyBase64(publicKey);
 
         Context.wallets.put(publicKey, wallet);
+        Context.blockchainStorage.saveWallet(wallet);
         Gson gson = new Gson();
         try (FileWriter writer = new FileWriter("data/wallets.json", true)) {
             gson.toJson(wallet, writer);
@@ -426,6 +481,39 @@ public class Context {
         }
         return keyPair;
     }
+
+    public static KeyPairWalletDTO createWalletIns() throws Exception {
+        Security.addProvider(new BouncyCastleProvider()); // Ensure BC provider is added
+        SecureRandom secureRandom = new SecureRandom();
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC", "BC");
+        ECNamedCurveParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("secp256k1");
+        keyPairGenerator.initialize(ecSpec, secureRandom);
+        KeyPair keyPair = keyPairGenerator.generateKeyPair();
+
+        // Use consistent encoding
+        String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
+        String privateKey = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
+
+        Wallet wallet = new Wallet()
+                .setBalance(0)
+                .setNonce(0)
+                .setTransactions(new ArrayList<>())
+                .setPublicKey(KeyPairUtils.base64ToHex(publicKey))
+                .setState("Active")
+                .setPublicKeyBase64(publicKey);
+
+        Context.wallets.put(publicKey, wallet);
+        Context.blockchainStorage.saveWallet(wallet);
+        Gson gson = new Gson();
+        try (FileWriter writer = new FileWriter("data/wallets.json", true)) {
+            gson.toJson(wallet, writer);
+            writer.write("\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new KeyPairWalletDTO(keyPair, wallet);
+    }
+
 
     public static KeyPair createGenesisWallet() throws Exception {
         Security.addProvider(new BouncyCastleProvider()); // Ensure BC provider is added
@@ -448,7 +536,7 @@ public class Context {
                 .setPublicKeyBase64(publicKey);
 
         Context.wallets.put(publicKey, wallet);
-
+        Context.blockchainStorage.saveWallet(wallet);
         Gson gson = new Gson();
         try (FileWriter writer = new FileWriter("data/wallets.json", true)) {
             gson.toJson(wallet, writer);
@@ -457,6 +545,18 @@ public class Context {
             e.printStackTrace();
         }
         return keyPair;
+    }
+
+    public static int getDatabaseSize(BlockchainStorage.Types type) {
+        return Context.blockchainStorage.getDatabaseSize(type);
+    }
+
+    public static Wallet getWalletFrmoLevel(String publicKeyHex) {
+        return Context.blockchainStorage.getWallet(publicKeyHex);
+    }
+
+    public static Transaction getTransactionFromLevel(String txHash) {
+        return Context.blockchainStorage.getTransactionMempool(txHash);
     }
 
     public static int transactionRate() {
@@ -497,5 +597,9 @@ public class Context {
         for (Transaction elem : Context.mempool.values()) {
             elem.showInfo();
         }
+    }
+
+    public static void showBlocks() {
+        Context.blockchainStorage.showBlocks();
     }
 }

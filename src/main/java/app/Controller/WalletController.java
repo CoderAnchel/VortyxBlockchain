@@ -31,28 +31,4 @@ public class WalletController {
             throw new RuntimeException(e);
         }
     }
-
-    @PostMapping("Transactions/add")
-    public TransactionDTO addTransaction(@RequestBody TransactionProposalDTO transactionProposalDTO) {
-        try {
-            Context.addTransaction(
-                    transactionProposalDTO.senderPublicKey,
-                    transactionProposalDTO.reciberPublicKey,
-                    KeyPairUtils.hexToBase64(transactionProposalDTO.senderPrivateKey), transactionProposalDTO.value,
-                    transactionProposalDTO.data, transactionProposalDTO.fee
-            );
-
-            TransactionConfirmedDTO transactionConfirmedDTO = new TransactionConfirmedDTO();
-            transactionConfirmedDTO.messague = "Operation signed and verified!, moving to mempool";
-            transactionConfirmedDTO.status = "MEMPOOL";
-            transactionConfirmedDTO.data = transactionProposalDTO.data;
-            transactionConfirmedDTO.fee = transactionProposalDTO.fee;
-            transactionConfirmedDTO.value = transactionProposalDTO.value;
-            transactionConfirmedDTO.reciberPublicKey = transactionProposalDTO.reciberPublicKey;
-            transactionConfirmedDTO.senderPublicKey = transactionProposalDTO.senderPublicKey;
-            return transactionConfirmedDTO;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 }

@@ -1,7 +1,14 @@
 package Core.Entities;
 
+import org.web3j.rlp.RlpEncoder;
+import org.web3j.rlp.RlpList;
+import org.web3j.rlp.RlpString;
+import org.web3j.rlp.RlpType;
+
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Block {
     private Date timestamp;
@@ -74,6 +81,10 @@ public class Block {
         this.transactions = transactions;
     }
 
+    public void setTransactions(List<String> transactions) {
+        this.transactions = (ArrayList<String>) transactions;
+    }
+
     public String merkleRoot() {
         return merkleRoot;
     }
@@ -90,8 +101,40 @@ public class Block {
         this.nonce = nonce;
     }
 
+
+    public byte[] toRLP() {
+        List<RlpType> blockElements = new ArrayList<>();
+        blockElements.add(RlpString.create(this.timestamp.toString()));
+        blockElements.add(RlpString.create(this.previousHash.getBytes()));
+        blockElements.add(RlpString.create(this.hash.getBytes()));
+        blockElements.add(RlpString.create(String.valueOf(this.nonce)));
+        blockElements.add(RlpString.create(this.merkleRoot.getBytes()));
+
+        List<RlpType> transactions = new ArrayList<>();
+        for (String tx: this.transactions) {
+            transactions.add(RlpString.create(tx.getBytes()));
+        }
+
+        blockElements.add(new RlpList(transactions));
+        blockElements.add(RlpString.create(String.valueOf(this.position)));
+        blockElements.add(RlpString.create(miner.getBytes()));
+        blockElements.add(RlpString.create(String.valueOf(fee)));
+
+        return RlpEncoder.encode(new RlpList(blockElements));
+    }
+
     @Override
     public String toString() {
-        return timestamp + merkleRoot + miner + position + fee + nonce + previousHash + transactions;
+        return "Block{" +
+                "timestamp=" + timestamp +
+                ", merkleRoot='" + merkleRoot + '\'' +
+                ", miner='" + miner + '\'' +
+                ", position=" + position +
+                ", fee=" + fee +
+                ", nonce=" + nonce +
+                ", previousHash='" + previousHash + '\'' +
+                ", hash='" + hash + '\'' +
+                ", transactions=" + transactions.stream().map(Object::toString).collect(Collectors.joining(", ")) +
+                '}';
     }
 }

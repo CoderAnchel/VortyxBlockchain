@@ -1,9 +1,14 @@
 package Core.Entities;
 
+import org.web3j.rlp.RlpEncoder;
+import org.web3j.rlp.RlpList;
+import org.web3j.rlp.RlpString;
+import org.web3j.rlp.RlpType;
 import utils.KeyPairUtils;
 
 import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Wallet {
     private String publicKey;
@@ -12,6 +17,19 @@ public class Wallet {
     private ArrayList<Transaction> transactions;
     private int Nonce;
     private String state;
+
+    public Wallet() {
+
+    }
+
+    public Wallet(String publicKey, String publicKeyBase64, double balance, ArrayList<Transaction> transactions, int nonce, String state) {
+        this.publicKey = publicKey;
+        this.publicKeyBase64 = publicKeyBase64;
+        this.balance = balance;
+        this.transactions = transactions;
+        Nonce = nonce;
+        this.state = state;
+    }
 
     public String publicKeyBase64() {
         return publicKeyBase64;
@@ -96,4 +114,29 @@ public class Wallet {
             System.out.println("       Number of Confirmations: " + transaction.numberOfComfirmations());
         }
     }
+
+    public byte[] toRLP() {
+        List<RlpType> walletElements = new ArrayList<>();
+
+        // Use byte arrays or consistent string representations
+        walletElements.add(RlpString.create(this.publicKey.getBytes()));
+        walletElements.add(RlpString.create(this.publicKeyBase64.getBytes()));
+        walletElements.add(RlpString.create(String.valueOf(this.balance)));
+
+        // Serialize transactions
+        List<RlpType> walletTransactions = new ArrayList<>();
+        for (Transaction tx : this.transactions) {
+            walletTransactions.add(RlpString.create(tx.toRLP()));
+        }
+
+        walletElements.add(new RlpList(walletTransactions));
+        walletElements.add(RlpString.create(String.valueOf(this.Nonce)));
+
+        // Ensure consistent state encoding
+        walletElements.add(RlpString.create(this.state.getBytes()));
+
+        return RlpEncoder.encode(new RlpList(walletElements));
+    }
+
+
 }
