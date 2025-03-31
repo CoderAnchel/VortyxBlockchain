@@ -120,12 +120,46 @@ public class Context {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+            Context.liquidate(transactions, transaction);
             Context.blockchainStorage.addTransactionsToDefinitive(transactions);
             Context.blockchainStorage.saveBlock(block);
             Context.blockchainStorage.showBlocks();
             return true;
         }
         return false;
+    }
+
+
+    /**
+     * this method is made to liquidate all the block transactions
+     */
+    public static void liquidate(List<Transaction> transactions, MinerTrans minerTrans) {
+        for (Transaction transaction : transactions) {
+            // Usar los métodos publicKeyHex()
+            Wallet reciverWallet = Context.blockchainStorage.getWallet(transaction.reciverPublicKey());
+            if (reciverWallet != null) {
+                reciverWallet.setBalance(reciverWallet.balance() + transaction.value());
+                Context.blockchainStorage.saveWallet(reciverWallet);
+                System.out.println("Reciver Wallet balance mod!");
+            }
+
+            Wallet senderWallet = Context.blockchainStorage.getWallet(transaction.senderPublicKey());
+            if (senderWallet != null) {
+                senderWallet.setBalance(senderWallet.balance() - transaction.value());
+                Context.blockchainStorage.saveWallet(senderWallet);
+                System.out.println("Sender Wallet balance mod!");
+            }
+        }
+
+        // Para la transacción del minero (ya funciona correctamente)
+        Wallet minerWallet = Context.blockchainStorage.getWallet(minerTrans.reciverPublicKey());
+        if (minerWallet != null) {
+            minerWallet.setBalance(minerWallet.balance() + minerTrans.value());
+            Context.blockchainStorage.saveWallet(minerWallet);
+            System.out.println("Miner Wallet balance mod!");
+            System.out.println("MINER WALLET UPDATED: ");
+            Context.getWalletFromLevel(minerWallet.publicKeyHex()).showInfo();
+        }
     }
 
     /**
@@ -358,6 +392,8 @@ public class Context {
             throw new WalletException("Sender wallet dosen't have enought founds!");
         }
         Transaction transaction = new Transaction();
+
+        // Configurar claves públicas en formato Base64
         transaction.setSenderPublicKey(senderPublicKey);
         transaction.setReciverPublicKey(reciverPublicKey);
         transaction.setValue(value);
@@ -560,6 +596,8 @@ public class Context {
 
         // Use consistent encoding
         String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
+        System.out.println("BASE64:" +publicKey);
+        System.out.println("hesa:" +(KeyPairUtils.base64ToHex(publicKey)));
         String privateKey = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
 
         Wallet wallet = new Wallet()
@@ -651,7 +689,7 @@ public class Context {
         return Context.blockchainStorage.getDatabaseSize(type);
     }
 
-    public static Wallet getWalletFrmoLevel(String publicKeyHex) {
+    public static Wallet getWalletFromLevel(String publicKeyHex) {
         return Context.blockchainStorage.getWallet(publicKeyHex);
     }
 

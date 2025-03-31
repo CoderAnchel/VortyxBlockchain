@@ -152,6 +152,10 @@ public class MinerTrans {
         return RlpEncoder.encode(new RlpList(transactionElements));
     }
 
+    public String reciverPublicKeyHex() {
+        return KeyPairUtils.base64ToHex(this.reciverPublicKey);
+    }
+
     @Override
     public String toString() {
         return "Transaction{" +

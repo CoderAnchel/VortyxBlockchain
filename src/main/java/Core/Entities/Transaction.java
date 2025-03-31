@@ -203,4 +203,10 @@ public class Transaction {
                 ", numberOfComfirmations=" + numberOfComfirmations +
                 '}';
     }
+
+    public void setSenderPublicKeyHex(String s) {
+    }
+
+    public void setReciverPublicKeyHex(String s) {
+    }
 }
