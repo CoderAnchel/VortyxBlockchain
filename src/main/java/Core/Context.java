@@ -1,6 +1,7 @@
 package Core;
 
 import Core.Entities.Block;
+import Core.Entities.MinerTrans;
 import Core.Entities.Transaction;
 import Core.Entities.Wallet;
 
@@ -19,6 +20,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import org.bouncycastle.util.encoders.Hex;
 import utils.IterationUtils;
 import utils.KeyPairUtils;
 
@@ -79,6 +81,45 @@ public class Context {
                 transaction.setState("CONFIRMED");
             }
 
+            MinerTrans transaction = new MinerTrans();
+            transaction.setReciverPublicKey(MINER_PUBLIC_KEY);
+            transaction.setValue(3.15);
+            transaction.setData("BLOCK CREATED");
+            transaction.setTimestamp(new Date());
+            transaction.setBlockHash(block.getHash());
+            transaction.setState("CONFIRMED");
+
+            String dataToHash =  transaction.reciverPublicKey()
+                    + transaction.value()
+                    + transaction.data()
+                    + transaction.timestamp();
+
+            String sha256hex = Hashing.sha256().hashString(dataToHash, StandardCharsets.UTF_8).toString();
+
+            transaction.setHashID(sha256hex);
+
+            try {
+                byte[] TransactionSignature = signTransaction(getPrivateKeyFromStringMiner(PRIVATE),
+                        dataToHash);
+                PublicKey clavePublica = getPublicKeyFromStringMiner(transaction.reciverPublicKey());
+                if (!verifySign(clavePublica, dataToHash, TransactionSignature)) {
+                    System.out.println("Invalid transaction signature!");
+                    throw new WalletException("Invalid transaction signature!");
+                }
+                System.out.println("Operation signed and verified!, moving to mempool");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException(e);
+            } catch (SignatureException e) {
+                throw new RuntimeException(e);
+            } catch (InvalidKeyException e) {
+                throw new RuntimeException(e);
+            } catch (NoSuchProviderException e) {
+                throw new RuntimeException(e);
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException(e);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
             Context.blockchainStorage.addTransactionsToDefinitive(transactions);
             Context.blockchainStorage.saveBlock(block);
             Context.blockchainStorage.showBlocks();
@@ -325,11 +366,11 @@ public class Context {
         transaction.setTimestamp(new Date());
 
         String dataToHash = transaction.senderPublicKey()
-            + transaction.reciverPublicKey()
-            + transaction.value()
-            + transaction.data()
-            + transaction.fee()
-            + transaction.timestamp();
+                + transaction.reciverPublicKey()
+                + transaction.value()
+                + transaction.data()
+                + transaction.fee()
+                + transaction.timestamp();
 
         String sha256hex = Hashing.sha256().hashString(dataToHash, StandardCharsets.UTF_8).toString();
 
@@ -381,6 +422,26 @@ public class Context {
         }
     }
 
+    private static PrivateKey getPrivateKeyFromStringMiner(String privateKeyString) {
+        try {
+            // Si es una transacción de minería y no hay clave privada real
+            if (privateKeyString == null || privateKeyString.isEmpty()) {
+                // Usar una clave privada específica para minería (puede ser la del sistema)
+                privateKeyString = System.getenv("PRIVATE_KEY");
+                if (privateKeyString == null || privateKeyString.isEmpty()) {
+                    throw new RuntimeException("No se encontró una clave privada para la operación de minería");
+                }
+            }
+
+            byte[] keyBytes = Hex.decode(privateKeyString);
+            KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
+            return keyFactory.generatePrivate(keySpec);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static PublicKey getPublicKeyFromString(String key) throws GeneralSecurityException {
         try {
             byte[] keyBytes = Base64.getDecoder().decode(key);
@@ -390,6 +451,45 @@ public class Context {
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
+        }
+    }
+
+    public static PublicKey getPublicKeyFromStringMiner(String publicKeyStr) {
+        try {
+            // Comprobar si la clave ya está en formato hexadecimal
+            if (publicKeyStr.startsWith("3056")) {
+                // Convertir de hexadecimal a bytes
+                byte[] publicKeyBytes = Hex.decode(publicKeyStr);
+                KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+                X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
+                return keyFactory.generatePublic(keySpec);
+            } else {
+                // Si no es hexadecimal, intentar decodificar como Base64
+                byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyStr);
+                KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+                X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
+                return keyFactory.generatePublic(keySpec);
+            }
+        } catch (Exception e) {
+            // En caso de error, intentar un método alternativo de decodificación
+            try {
+                byte[] publicKeyBytes = Hex.decode(publicKeyStr);
+                KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+
+                // Intentar extraer solo la parte relevante de la clave si hay datos adicionales
+                int keyLength = 91; // Longitud estándar de clave EC codificada en X.509
+                if (publicKeyBytes.length > keyLength) {
+                    byte[] trimmedKeyBytes = new byte[keyLength];
+                    System.arraycopy(publicKeyBytes, 0, trimmedKeyBytes, 0, keyLength);
+                    X509EncodedKeySpec keySpec = new X509EncodedKeySpec(trimmedKeyBytes);
+                    return keyFactory.generatePublic(keySpec);
+                } else {
+                    X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
+                    return keyFactory.generatePublic(keySpec);
+                }
+            } catch (Exception ex) {
+                throw new RuntimeException("Error al procesar la clave pública: " + ex.getMessage(), ex);
+            }
         }
     }
 
@@ -601,5 +701,9 @@ public class Context {
 
     public static void showBlocks() {
         Context.blockchainStorage.showBlocks();
+    }
+
+    public static void recollect(List<Transaction> transactions, MinerTrans minerTrans) {
+
     }
 }
