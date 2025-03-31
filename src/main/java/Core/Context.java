@@ -76,11 +76,6 @@ public class Context {
                 return false;
             }
 
-            for (Transaction transaction : transactions) {
-                transaction.setBlockHash(block.getHash());
-                transaction.setState("CONFIRMED");
-            }
-
             MinerTrans transaction = new MinerTrans();
             transaction.setReciverPublicKey(MINER_PUBLIC_KEY);
             transaction.setValue(3.15);
@@ -120,8 +115,12 @@ public class Context {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            Context.liquidate(transactions, transaction);
-            Context.blockchainStorage.addTransactionsToDefinitive(transactions);
+            List<Transaction> validated = Context.liquidate(transactions, transaction);
+            for (Transaction tx : validated) {
+                tx.setBlockHash(block.getHash());
+                tx.setState("CONFIRMED");
+            }
+            Context.blockchainStorage.addTransactionsToDefinitive(validated);
             Context.blockchainStorage.saveBlock(block);
             Context.blockchainStorage.showBlocks();
             return true;
@@ -133,21 +132,24 @@ public class Context {
     /**
      * this method is made to liquidate all the block transactions
      */
-    public static void liquidate(List<Transaction> transactions, MinerTrans minerTrans) {
+    public static List<Transaction> liquidate(List<Transaction> transactions, MinerTrans minerTrans) {
+        List<Transaction> validated = new ArrayList<>();
         for (Transaction transaction : transactions) {
-            // Usar los métodos publicKeyHex()
-            Wallet reciverWallet = Context.blockchainStorage.getWallet(transaction.reciverPublicKey());
-            if (reciverWallet != null) {
-                reciverWallet.setBalance(reciverWallet.balance() + transaction.value());
-                Context.blockchainStorage.saveWallet(reciverWallet);
-                System.out.println("Reciver Wallet balance mod!");
-            }
-
             Wallet senderWallet = Context.blockchainStorage.getWallet(transaction.senderPublicKey());
-            if (senderWallet != null) {
+            Wallet reciverWallet = Context.blockchainStorage.getWallet(transaction.reciverPublicKey());
+            if (senderWallet != null && reciverWallet != null && (senderWallet.balance() - (transaction.value() + transaction.fee())) >= 0) {
                 senderWallet.setBalance(senderWallet.balance() - transaction.value());
                 Context.blockchainStorage.saveWallet(senderWallet);
-                System.out.println("Sender Wallet balance mod!");
+                System.out.println("Sender Wallet balance mod! info: !");
+                Context.blockchainStorage.getWallet(transaction.senderPublicKey()).showInfo();
+                reciverWallet.setBalance(reciverWallet.balance() + transaction.value());
+                Context.blockchainStorage.saveWallet(reciverWallet);
+                System.out.println("Reciver Wallet balance mod info: !");
+                Context.blockchainStorage.getWallet(transaction.reciverPublicKey()).showInfo();
+                validated.add(transaction);
+            } else {
+                System.out.println("We got problems out of cash!! moving back to mempool");
+                Context.blockchainStorage.saveTransactionMempoool(transaction);
             }
         }
 
@@ -160,6 +162,7 @@ public class Context {
             System.out.println("MINER WALLET UPDATED: ");
             Context.getWalletFromLevel(minerWallet.publicKeyHex()).showInfo();
         }
+        return validated;
     }
 
     /**
@@ -422,6 +425,7 @@ public class Context {
             System.out.println("Operation signed and verified!, moving to mempool");
             transaction.setState("Meempool");
             Context.blockchainStorage.saveTransactionMempoool(transaction);
+            Context.buildBlock();
         } catch (InvalidKeyException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
@@ -654,10 +658,12 @@ public class Context {
 
         // Use consistent encoding
         String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
+        System.out.println("BASE64:" +publicKey);
+        System.out.println("hesa:" +(KeyPairUtils.base64ToHex(publicKey)));
         String privateKey = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
 
         Wallet wallet = new Wallet()
-                .setBalance(initialValue)
+                .setBalance(100)
                 .setNonce(0)
                 .setTransactions(new ArrayList<>())
                 .setPublicKey(KeyPairUtils.base64ToHex(publicKey))
