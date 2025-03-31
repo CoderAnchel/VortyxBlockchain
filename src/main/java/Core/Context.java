@@ -380,8 +380,8 @@ public class Context {
     public static void addTransaction(String senderPublicKey, String reciverPublicKey, String privateKey, double value, String data,double fee) throws Exception {
         System.out.println("Mempool size: "+Context.getDatabaseSize(BlockchainStorage.Types.MEMPOOL));
         System.out.println("Blocks size: "+Context.getDatabaseSize(BlockchainStorage.Types.BLOCKS));
-        Wallet sender = wallets.get(senderPublicKey);
-        Wallet reciver = wallets.get(reciverPublicKey);
+        Wallet sender = Context.blockchainStorage.getWallet(senderPublicKey);
+        Wallet reciver = Context.blockchainStorage.getWallet(reciverPublicKey);
         if(sender == null) {
             throw new WalletException("Sender wallet dosen't exist!");
         }
@@ -420,17 +420,8 @@ public class Context {
                 throw new WalletException("Invalid transaction signature!");
             }
             System.out.println("Operation signed and verified!, moving to mempool");
-            Context.mempool.put(transaction.HashID(), transaction);
             transaction.setState("Meempool");
             Context.blockchainStorage.saveTransactionMempoool(transaction);
-            Gson gson = new Gson();
-            Context.buildBlock();
-            try (FileWriter writer = new FileWriter("data/transactions_MEEMPOOL.json", true)) {
-                gson.toJson(transaction, writer);
-                writer.write("\n");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         } catch (InvalidKeyException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {

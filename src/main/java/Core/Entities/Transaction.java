@@ -208,5 +208,6 @@ public class Transaction {
     }
 
     public void setReciverPublicKeyHex(String s) {
+
     }
 }
