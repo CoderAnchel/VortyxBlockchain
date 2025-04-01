@@ -34,6 +34,7 @@ public class Context {
     private static final String MINER_PUBLIC_KEY = Dotenv.load().get("PUBLIC_KEY");
     //private static int transactionPerBlock;
     private static BlockchainStorage blockchainStorage;
+    private Block lastBlock;
 
     public static void init() {
         Context.blockchainStorage = new BlockchainStorage("database/");
@@ -65,8 +66,6 @@ public class Context {
                             BlockchainStorage.Types.MEMPOOL);
             //deleting transactions from mempool
             Context.blockchainStorage.deleteEntities(IterationUtils.getTransKeys(transactions), BlockchainStorage.Types.MEMPOOL );
-            block.setTransactions(IterationUtils.getTransKeys(transactions));
-            block.setMerkleRoot(Context.calculateMerkleRoot(IterationUtils.getTransKeys(transactions)));
             // Use dynamic difficulty (adjustable)
             int difficulty = 4; // Can be made configurable
             boolean minedSuccessfully = mineBlock(block, difficulty);
@@ -120,12 +119,75 @@ public class Context {
                 tx.setBlockHash(block.getHash());
                 tx.setState("CONFIRMED");
             }
+            block.setTransactions(IterationUtils.getTransKeys(validated));
+            block.setMerkleRoot(Context.calculateMerkleRoot(IterationUtils.getTransKeys(validated)));
             Context.blockchainStorage.addTransactionsToDefinitive(validated);
             Context.blockchainStorage.saveBlock(block);
             Context.blockchainStorage.showBlocks();
             return true;
         }
         return false;
+    }
+
+    public static boolean buildGenesisBlock() {
+        String PRIVATE = Dotenv.load().get("PRIVATE_KEY");
+        Wallet minerWallet = Context.blockchainStorage.getWallet(Context.MINER_PUBLIC_KEY);
+            Block block = new Block();
+            block.setTimestamp(new Date());
+            block.setMiner(Context.MINER_PUBLIC_KEY);
+            block.setPreviousHash(""); // Inicializa previousHash con cadena vacía para el primer bloque
+            // Use dynamic difficulty (adjustable)
+            int difficulty = 4; // Can be made configurable
+            mineBlock(block, difficulty);
+
+            MinerTrans transaction = new MinerTrans();
+            transaction.setReciverPublicKey(MINER_PUBLIC_KEY);
+            transaction.setValue(600);
+            transaction.setData("BLOCK CREATED");
+            transaction.setTimestamp(new Date());
+            transaction.setBlockHash(block.getHash());
+            transaction.setState("CONFIRMED");
+
+            List<String> transactionsList = new ArrayList<>();
+            transactionsList.add(transaction.HashID());
+
+            String dataToHash =  transaction.reciverPublicKey()
+                    + transaction.value()
+                    + transaction.data()
+                    + transaction.timestamp();
+
+            String sha256hex = Hashing.sha256().hashString(dataToHash, StandardCharsets.UTF_8).toString();
+
+            transaction.setHashID(sha256hex);
+
+            try {
+                byte[] TransactionSignature = signTransaction(getPrivateKeyFromStringMiner(PRIVATE),
+                        dataToHash);
+                PublicKey clavePublica = getPublicKeyFromStringMiner(transaction.reciverPublicKey());
+                if (!verifySign(clavePublica, dataToHash, TransactionSignature)) {
+                    System.out.println("Invalid transaction signature!");
+                    throw new WalletException("Invalid transaction signature!");
+                }
+                System.out.println("Operation signed and verified!, moving to mempool");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException(e);
+            } catch (SignatureException e) {
+                throw new RuntimeException(e);
+            } catch (InvalidKeyException e) {
+                throw new RuntimeException(e);
+            } catch (NoSuchProviderException e) {
+                throw new RuntimeException(e);
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException(e);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            Context.blockchainStorage.saveTransaction(transaction.toTransaction());
+            block.setTransactions(transactionsList);
+            block.setMerkleRoot(Context.calculateMerkleRoot(transactionsList));
+            Context.blockchainStorage.saveBlock(block);
+            Context.blockchainStorage.showBlocks();
+            return true;
     }
 
 
@@ -160,6 +222,7 @@ public class Context {
             Context.blockchainStorage.saveWallet(minerWallet);
             System.out.println("Miner Wallet balance mod!");
             System.out.println("MINER WALLET UPDATED: ");
+            validated.add(minerTrans.toTransaction());
             Context.getWalletFromLevel(minerWallet.publicKeyHex()).showInfo();
         }
         return validated;

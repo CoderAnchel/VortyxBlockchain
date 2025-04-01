@@ -170,4 +170,19 @@ public class MinerTrans {
                 ", numberOfComfirmations=" + numberOfComfirmations +
                 '}';
     }
+
+    public Transaction toTransaction() {
+        return new Transaction(
+                this.HashID,
+                this.reciverPublicKey,
+                this.blockHash,
+                this.state,
+                this.value,
+                this.nonce,
+                this.timestamp,
+                this.data,
+                this.numberOfComfirmations
+        );
+    }
+
 }

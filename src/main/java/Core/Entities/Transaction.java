@@ -45,6 +45,18 @@ public class Transaction {
 
     }
 
+    public Transaction(String hashID, String reciverPublicKey, String blockHash, String state, double value, int nonce, Date timestamp, String data, int numberOfComfirmations) {
+                this.HashID = hashID;
+                this.reciverPublicKey = reciverPublicKey;
+                this.blockHash = blockHash;
+                this.state = state;
+                this.value = value;
+                this.nonce = nonce;
+                this.timestamp = timestamp;
+                this.data = data;
+                this.numberOfComfirmations = numberOfComfirmations;
+    }
+
 
     public String senderPublicKeyHex() {
         return KeyPairUtils.base64ToHex(this.senderPublicKey);
