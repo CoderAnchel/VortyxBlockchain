@@ -104,20 +104,22 @@ public class Block {
 
     public byte[] toRLP() {
         List<RlpType> blockElements = new ArrayList<>();
-        blockElements.add(RlpString.create(this.timestamp.toString()));
-        blockElements.add(RlpString.create(this.previousHash.getBytes()));
-        blockElements.add(RlpString.create(this.hash.getBytes()));
+        blockElements.add(RlpString.create(this.timestamp != null ? this.timestamp.toString() : ""));
+        blockElements.add(RlpString.create(this.previousHash != null ? this.previousHash : ""));
+        blockElements.add(RlpString.create(this.hash != null ? this.hash : ""));
         blockElements.add(RlpString.create(String.valueOf(this.nonce)));
-        blockElements.add(RlpString.create(this.merkleRoot.getBytes()));
+        blockElements.add(RlpString.create(this.merkleRoot != null ? this.merkleRoot : ""));
 
         List<RlpType> transactions = new ArrayList<>();
-        for (String tx: this.transactions) {
-            transactions.add(RlpString.create(tx.getBytes()));
+        if (this.transactions != null) {
+            for (String tx: this.transactions) {
+                transactions.add(RlpString.create(tx != null ? tx.getBytes() : "".getBytes()));
+            }
         }
 
         blockElements.add(new RlpList(transactions));
         blockElements.add(RlpString.create(String.valueOf(this.position)));
-        blockElements.add(RlpString.create(miner.getBytes()));
+        blockElements.add(RlpString.create(miner != null ? miner.getBytes() : "".getBytes()));
         blockElements.add(RlpString.create(String.valueOf(fee)));
 
         return RlpEncoder.encode(new RlpList(blockElements));

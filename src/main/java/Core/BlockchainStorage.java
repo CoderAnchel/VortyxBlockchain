@@ -22,6 +22,7 @@ public class BlockchainStorage {
     private DB mempoolDatabase;
     private DB transactionDatabase;
     private DB blocksDatabase;
+    private DB metadataDatabase;
 
     public enum Types {
         WALLETS,
@@ -39,8 +40,31 @@ public class BlockchainStorage {
             mempoolDatabase = factory.open(new File(dbpath+"mempool"), options);
             transactionDatabase = factory.open(new File(dbpath+"transactions"), options);
             blocksDatabase = factory.open(new File(dbpath+"blocks"), options);
+            metadataDatabase= factory.open(new File(dbpath+"metadata"), options);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public Block getLastBlock() {
+        try {
+            byte[] key = "lastBlock".getBytes();
+
+            return rlpUtils.BlockFromRLP(metadataDatabase.get(key));
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving wallet to LevelDB", e);
+        }
+    }
+
+    public void saveLastBlock(Block block) {
+        try {
+            byte[] key = "lastBlock".getBytes();
+            byte[] value = block.toRLP();
+
+            // Write to LevelDB
+            metadataDatabase.put(key, value);
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving wallet to LevelDB", e);
         }
     }
 
@@ -51,8 +75,9 @@ public class BlockchainStorage {
 
             // Write to LevelDB
             blocksDatabase.put(key, value);
+            metadataDatabase.put("lastBlock".getBytes(), value);
         } catch (Exception e) {
-            throw new RuntimeException("Error saving wallet to LevelDB", e);
+            throw new RuntimeException("Error saving block to LevelDB", e);
         }
     }
 
@@ -148,9 +173,9 @@ public class BlockchainStorage {
         }
     }
 
-    public Transaction getTransaction(String publicKeyHex) {
+    public Transaction getTransaction(String txHash) {
         try {
-            byte[] key = publicKeyHex.getBytes();
+            byte[] key = txHash.getBytes();
             byte[] response = this.transactionDatabase.get(key);
             if (response == null) {
                 return null;

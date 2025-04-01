@@ -121,6 +121,8 @@ public class Context {
             }
             block.setTransactions(IterationUtils.getTransKeys(validated));
             block.setMerkleRoot(Context.calculateMerkleRoot(IterationUtils.getTransKeys(validated)));
+            block.setPreviousHash(Context.blockchainStorage.getLastBlock().getHash());
+            block.setPosition(Context.blockchainStorage.getDatabaseSize(BlockchainStorage.Types.BLOCKS) + 1);
             Context.blockchainStorage.addTransactionsToDefinitive(validated);
             Context.blockchainStorage.saveBlock(block);
             Context.blockchainStorage.showBlocks();
@@ -129,7 +131,7 @@ public class Context {
         return false;
     }
 
-    public static boolean buildGenesisBlock() {
+    public static void buildGenesisBlock() {
         String PRIVATE = Dotenv.load().get("PRIVATE_KEY");
         Wallet minerWallet = Context.blockchainStorage.getWallet(Context.MINER_PUBLIC_KEY);
             Block block = new Block();
@@ -147,9 +149,6 @@ public class Context {
             transaction.setTimestamp(new Date());
             transaction.setBlockHash(block.getHash());
             transaction.setState("CONFIRMED");
-
-            List<String> transactionsList = new ArrayList<>();
-            transactionsList.add(transaction.HashID());
 
             String dataToHash =  transaction.reciverPublicKey()
                     + transaction.value()
@@ -182,12 +181,16 @@ public class Context {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+            List<String> transactionsList = new ArrayList<>();
+            transactionsList.add(transaction.HashID());
             Context.blockchainStorage.saveTransaction(transaction.toTransaction());
             block.setTransactions(transactionsList);
             block.setMerkleRoot(Context.calculateMerkleRoot(transactionsList));
+            block.setPosition(Context.blockchainStorage.getDatabaseSize(BlockchainStorage.Types.BLOCKS) + 1);
+            Context.liquidateGenesis(transaction);
             Context.blockchainStorage.saveBlock(block);
+            Context.blockchainStorage.saveLastBlock(block);
             Context.blockchainStorage.showBlocks();
-            return true;
     }
 
 
@@ -226,6 +229,18 @@ public class Context {
             Context.getWalletFromLevel(minerWallet.publicKeyHex()).showInfo();
         }
         return validated;
+    }
+
+    public static void liquidateGenesis(MinerTrans minerTrans) {
+        // Para la transacción del minero (ya funciona correctamente)
+        Wallet minerWallet = Context.blockchainStorage.getWallet(minerTrans.reciverPublicKey());
+        if (minerWallet != null) {
+            minerWallet.setBalance(minerWallet.balance() + minerTrans.value());
+            Context.blockchainStorage.saveWallet(minerWallet);
+            System.out.println("Miner Wallet balance mod!");
+            System.out.println("MINER WALLET UPDATED: ");
+            Context.getWalletFromLevel(minerWallet.publicKeyHex()).showInfo();
+        }
     }
 
     /**

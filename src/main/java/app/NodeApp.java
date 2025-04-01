@@ -56,9 +56,6 @@ public class NodeApp {
             //   walletConverted.showInfo();
 
             //  System.out.println("GETTING IT FROM LEVEEEL!!!!!!");
-               Wallet wallet = Context.getWalletFromLevel(
-                       "3056301006072a8648ce3d020106052b8104000a03420004accd9bc4c2354bb12e8637cffeb29913340d0a52c9fed1e6c531c6cea94344ed49429e9ba9a3d5fd310ee6c5a3acff8c1626e488400d0a58aa55a36d3c956ae9");
-            System.out.println(wallet);
             //   System.out.println("----------");
             //   System.out.println("Transaction from level!!!");
             //   Transaction transaction = Context.getTransactionFromLevel(
