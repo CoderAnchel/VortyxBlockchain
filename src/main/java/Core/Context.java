@@ -214,7 +214,7 @@ public class Context {
                 validated.add(transaction);
             } else {
                 System.out.println("We got problems out of cash!! moving back to mempool");
-                Context.blockchainStorage.saveTransactionMempoool(transaction);
+                // Context.blockchainStorage.saveTransactionMempoool(transaction);
             }
         }
 
