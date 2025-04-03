@@ -238,10 +238,17 @@ public class Context {
 
     public static void confirmTransactions(Block initialBlock, int confNum) {
         Block block = initialBlock;
-        for (int i = 0; i < confNum; i++) {
+
+        for (int i = 0; i < confNum && block != null; i++) {
+            if (block.getPreviousHash() == null || block.getPreviousHash().isEmpty()) {
+                break;
+            }
+
             block = Context.blockchainStorage.getBlock(block.getPreviousHash());
 
-            if (block == null) break;
+            if (block == null) {
+                break;
+            }
 
             for (Transaction tx : Context.blockchainStorage.getTransactions(block.transactions())) {
                 tx.setNumberOfComfirmations(tx.numberOfComfirmations() + 1);

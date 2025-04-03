@@ -84,10 +84,15 @@ public class BlockchainStorage {
     public Block getBlock(String blockHash) {
         try {
             byte[] key = blockHash.getBytes();
+            byte[] blockData = blocksDatabase.get(key);
 
-            return rlpUtils.BlockFromRLP(blocksDatabase.get(key));
+            if (blockData == null) {
+                return null; // Retornar null si no existe el bloque
+            }
+
+            return rlpUtils.BlockFromRLP(blockData);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error obteniendo bloque", e);
         }
     }
 
@@ -145,7 +150,7 @@ public class BlockchainStorage {
     public void deleteTransactionMempool(String publicKeyHex) {
         try {
             byte[] key = publicKeyHex.getBytes();
-            this.transactionDatabase.delete(key);
+            this.mempoolDatabase.delete(key);
         } catch (Exception e) {
             throw new RuntimeException("Error deleting transaction from LevelDB", e);
         }
