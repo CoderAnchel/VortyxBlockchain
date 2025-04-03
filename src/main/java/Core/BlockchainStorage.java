@@ -81,6 +81,16 @@ public class BlockchainStorage {
         }
     }
 
+    public Block getBlock(String blockHash) {
+        try {
+            byte[] key = blockHash.getBytes();
+
+            return rlpUtils.BlockFromRLP(blocksDatabase.get(key));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void saveWallet(Wallet wallet) {
         try {
             // Use public key as the key for storing wallet
@@ -278,6 +288,26 @@ public class BlockchainStorage {
             }
         }
     }
+
+    public List<Transaction> getTransactions(List<String> keys)  {
+        List<Transaction> transactions = new ArrayList<>();
+        for (String key : keys) {
+            byte[] txData = transactionDatabase.get(key.getBytes());
+            if (txData == null) {
+                System.out.println("Transacción no encontrada: " + key);
+                continue;
+            }
+
+            try {
+                Transaction tx = rlpUtils.TransactionfromRLP(txData);
+                transactions.add(tx);
+            } catch (Exception e) {
+                System.out.println("Error al deserializar transacción " + key + ": " + e.getMessage());
+            }
+        }
+        return transactions;
+    }
+
     public void deleteEntities(List<String> keys, Types type) {
         DB database = switch (type) {
             case BLOCKS -> blocksDatabase;
@@ -303,7 +333,7 @@ public class BlockchainStorage {
             }
         }
     }
-
+    
     public void addTransactionsToDefinitive(List<Transaction> transactions) {
         for (Transaction transaction : transactions) {
             try {

@@ -7,6 +7,7 @@ import Core.Entities.Wallet;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.util.*;
 import java.security.*;
 import java.security.spec.*;
@@ -34,7 +35,7 @@ public class Context {
     private static final String MINER_PUBLIC_KEY = Dotenv.load().get("PUBLIC_KEY");
     //private static int transactionPerBlock;
     private static BlockchainStorage blockchainStorage;
-    private Block lastBlock;
+    private static int confNum = 15;
 
     public static void init() {
         Context.blockchainStorage = new BlockchainStorage("database/");
@@ -125,6 +126,7 @@ public class Context {
             block.setPosition(Context.blockchainStorage.getDatabaseSize(BlockchainStorage.Types.BLOCKS) + 1);
             Context.blockchainStorage.addTransactionsToDefinitive(validated);
             Context.blockchainStorage.saveBlock(block);
+            Context.confirmTransactions(block, Context.confNum);
             Context.blockchainStorage.showBlocks();
             return true;
         }
@@ -204,6 +206,8 @@ public class Context {
             Wallet reciverWallet = Context.blockchainStorage.getWallet(transaction.reciverPublicKey());
             if (senderWallet != null && reciverWallet != null && (senderWallet.balance() - (transaction.value() + transaction.fee())) >= 0) {
                 senderWallet.setBalance(senderWallet.balance() - transaction.value());
+                transaction.setNonce(senderWallet.Nonce());
+                senderWallet.setNonce(senderWallet.Nonce() + 1);
                 Context.blockchainStorage.saveWallet(senderWallet);
                 System.out.println("Sender Wallet balance mod! info: !");
                 Context.blockchainStorage.getWallet(transaction.senderPublicKey()).showInfo();
@@ -229,6 +233,21 @@ public class Context {
             Context.getWalletFromLevel(minerWallet.publicKeyHex()).showInfo();
         }
         return validated;
+    }
+
+
+    public static void confirmTransactions(Block initialBlock, int confNum) {
+        Block block = initialBlock;
+        for (int i = 0; i < confNum; i++) {
+            block = Context.blockchainStorage.getBlock(block.getPreviousHash());
+
+            if (block == null) break;
+
+            for (Transaction tx : Context.blockchainStorage.getTransactions(block.transactions())) {
+                tx.setNumberOfComfirmations(tx.numberOfComfirmations() + 1);
+                Context.blockchainStorage.saveTransaction(tx);
+            }
+        }
     }
 
     public static void liquidateGenesis(MinerTrans minerTrans) {
