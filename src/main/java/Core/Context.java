@@ -51,6 +51,7 @@ public class Context {
     }
 
     public static boolean buildBlock() {
+
         String PRIVATE = Dotenv.load().get("PRIVATE_KEY");
         Wallet minerWallet = Context.blockchainStorage.getWallet(Context.MINER_PUBLIC_KEY);
 
@@ -683,6 +684,10 @@ public class Context {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static Wallet getWalletDetails(String publicKey) {
+        return Context.blockchainStorage.getWallet(publicKey);
     }
 
     public static KeyPair createWallet() throws Exception {

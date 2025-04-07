@@ -1,14 +1,12 @@
 package app.Controller;
 
 import Core.Context;
+import Core.Entities.Wallet;
 import app.DTOS.TransactionConfirmedDTO;
 import app.DTOS.TransactionDTO;
 import app.DTOS.TransactionProposalDTO;
 import app.DTOS.WalletCreationDTO;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import utils.KeyPairUtils;
 
 import java.security.KeyPair;
@@ -46,4 +44,10 @@ public class WalletController {
             throw new RuntimeException(e);
         }
     }
+
+    @GetMapping("/Wallet/details")
+    public Wallet getWalletDetails(@RequestParam String publicKey) {
+        return Context.getWalletDetails(publicKey);
+    }
+
 }
