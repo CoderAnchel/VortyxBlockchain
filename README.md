@@ -12,7 +12,9 @@ By the end of this project, you’ll have:
 - A local blockchain capable of signing transactions, mining blocks, and validating chains.
 - A foundation for scaling to a fully decentralized network.
 
----
+Read the full article on Medium for an in-depth explanation of the project:  
+
+👉 [Creating a Blockchain with Java and Go Part 1: The Java Node](https://medium.com/@coderanchel/creating-a-blockchain-with-java-and-go-part-1-the-java-node-c10f5f51b60e)
 
 ## 🛠️ Features
 
