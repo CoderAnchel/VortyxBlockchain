@@ -129,5 +129,11 @@ To scale the local blockchain into a real network:
 This project is open-source and available under the [MIT License](LICENSE).
 
 ---
+![Captura de pantalla 2025-04-12 a las 18 39 39](https://github.com/user-attachments/assets/5789e7bf-85f7-4971-aa06-e562eee2f024)
+![Captura de pantalla 2025-04-12 a las 18 40 04](https://github.com/user-attachments/assets/07053a0a-4985-4082-be5b-37aee38ad564)
+![Captura de pantalla 2025-04-12 a las 18 40 47](https://github.com/user-attachments/assets/239ba7d7-fbe0-476d-8be8-ada9560f5da3)
+![Captura de pantalla 2025-04-12 a las 18 41 38](https://github.com/user-attachments/assets/0b714581-c9ab-4df0-bb31-7643d45e090b)
+![Captura de pantalla 2025-04-12 a las 18 41 53](https://github.com/user-attachments/assets/af1d0a5a-af97-4f1b-a305-a3f39ea656d8)
 
 Happy coding! 🚀
+
